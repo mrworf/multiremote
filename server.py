@@ -12,6 +12,9 @@ to a new scene will automatically detach from the previous.
 """
 from flask import Flask
 from flask import jsonify
+import threading
+import Queue
+import time
 
 # Import the devices
 from driver_rxv1900 import DriverRXV1900
@@ -102,14 +105,20 @@ some feature, it will be None instead of an array.
 """
 ZONE_TABLE = {
   "zone1" : {
+    "id"    : 1,
+    "name"  : "Livingroom",
     "audio" : ["receiver"],
     "video" : ["tv", "projector"],
   },
   "zone2" : {
+    "id"    : 2,
+    "name"  : "Kitchen",
     "audio" : ["receiver"],
     "video" : None,
   },
   "zone3" : {
+    "id"    : 3,
+    "name"  : "Patio",
     "audio" : ["receiver"],
     "video" : None,
   }
@@ -147,8 +156,83 @@ REMOTE_TABLE = {
   }
 }
 
+class Router (threading.Thread):
+  DELAY = 30 # delay in seconds
+  workList = Queue.Queue(10)
+  
+  RouteMap = {}
+  
+  def __init__(self):
+    threading.Thread.__init__(self)
+    self.daemon = True
+    self.start()
+  
+  def submitRoute(self, zone, scene):
+    """
+    If scene is None, it means to remove the input, ergo, close it. 
+    """
+    self.workList.put({zone : self.resolveScene(scene)})
+  
+  def run(self):
+    while True:
+      order = self.workList.get(True)
+      self.processWorkOrder(order)
+
+  def getZoneDriver(self, zone):
+    if zone in self.RouteMap:
+      return self.RouteMap[zone]
+    return None
+
+  def processWorkOrder(self, order):
+    zone = order.key()
+    zid = self.resolveZoneId(zone)
+    oldDriver = self.getZoneDriver(zone)
+    newDriver = order.value()
+    self.RouteMap[zone] = newDriver
+    
+    if newDriver is None:
+      self.resolveDriver(self.resolveZoneAudio(zone)).setPower(zid, False)
+      if self.zoneUsage(oldDriver) == False:
+        self.resolveDriver(oldDriver).setPower(False)
+    elif oldDriver is None:
+      self.resolveDriver(self.resolveZoneAudio(zone)).setPower(zid, True)
+      self.resolveDriver(newDriver).setPower(True)
+
+    if newDriver != None:
+      self.resolveDriver(self.resolveZoneAudio(zone)).setInput(zone, self.resolveInput(newDriver))    
+  
+  def zoneUsage(self, driver):
+    """Check if a driver is still in use"""
+    for r in self.RouteMap:
+      if self.RouteMap[r] == driver:
+        return True
+    return False
+
+  def resolveScene(self, scene):
+    """Resolves a scene into the underlying driver"""
+    return SCENE_TABLE[scene]["driver"]
+
+  def resolveDriver(self, driver):
+    """Translates a driver into its object"""
+    return DRIVER_TABLE[driver]
+  
+  def resolveZoneId(self, zone):
+    """Translates the zone name into a numerical id"""
+    return ZONE_TABLE[zone]["id"]
+
+  def resolveZoneAudio(self, zone):
+    """Translates the zone name into the audio component, right now we just use the first one"""
+    return ZONE_TABLE[zone]["audio"][0]
+  
+  def resolveInput(self, driver):
+    """Translates the driver into the correct input on the receiver"""
+    for s in SCENE_TABLE:
+      if SCENE_TABLE[s]["driver"] == driver:
+        return SCENE_TABLE[s]["input"]
+    return None
 
 app = Flask(__name__)
+router = Router()
 
 @app.route("/")
 def api_root():
@@ -158,30 +242,50 @@ def api_root():
     
   return result
 
+@app.route("/scene", defaults={"scene" : None})
 @app.route("/scene/<scene>")
 def api_scene(scene):
-  if not scene in SCENE_TABLE:
-    ret = {"status": 404}
+  ret = {
+    "status" : 200,
+  }
+   
+  if scene is None:
+    ret["scenes"] = sceneGetList(None)
+  elif not scene in SCENE_TABLE:
+    ret["status"] = 404
+    ret["message"] = "No such scene"
   else:
-    ret = {
-      "status" : 200,
-      "scene" : SCENE_TABLE[scene]
+    ret["scene"] = {
+      "scene"       : scene,
+      "name"        : SCENE_TABLE[scene]["name"],
+      "description" : SCENE_TABLE[scene]["description"],
+      "zones"       : sceneGetAssigned(scene),
+      "remotes"     : sceneGetAttached(scene)
     }
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
 
+@app.route("/assign", defaults={"zone" : None, "scene" : None})
 @app.route("/assign/<zone>", defaults={"scene" : None})
 @app.route("/assign/<zone>/<scene>")
 def api_assign(zone, scene):
   ret = {
     "status" : 200,
-    "active-scene" : getZoneScene(zone)
   }
+  
+  if zone == None:
+    ret["zones"] = zoneGetList()
+  else:
+    ret["active"] = zoneGetScene(zone)
   
   if scene != None:
     ZONE_TABLE[zone]["active-scene"] = scene;
-  
+    router.submitRoute(zone, scene)
+    
+  elif zone != None:
+    ret["scenes"] = sceneGetList(zone)
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
@@ -190,36 +294,31 @@ def api_assign(zone, scene):
 def api_unassign(zone):
   ret = {
     "status" : 200,
-    "active-scene" : None
+    "active" : None
   }
   
   ZONE_TABLE[zone]["active-scene"] = None;
+  router.submitRoute(zone, None)
   
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
-    
 
-
-@app.route("/attach/<remote>/<zone>", defaults={"scene" : None, "options" : None})
-@app.route("/attach/<remote>/<zone>/<scene>", defaults={"options" : None})
-@app.route("/attach/<remote>/<zone>/<scene>/<options>")
-def api_attach(remote, zone, scene, options):
+@app.route("/attach/<remote>", defaults={"scene" : None, "options" : None})
+@app.route("/attach/<remote>/<scene>", defaults={"options" : None})
+@app.route("/attach/<remote>/<scene>/<options>")
+def api_attach(remote, scene, options):
   ret = {
     "status" : 200,
   }
   
-  if scene == None:
-    # List available scenes for this zone
-    ret["scenes"] = sceneList(zone)
-    ret["active-scene"] = getZoneScene(zone)
-  else:
-    ret["scene-in-use"] = isSceneActive(scene, remote)
-    ret["active-scene"] = getZoneScene(zone)
+  ret["active"] = REMOTE_TABLE[remote]["active-scene"]
+  if scene != None:
+    ret["users"] = sceneGetAttached(scene)
     if options == "check":
       pass
     else:
-      REMOTE_TABLE[remote]["active-scene"] = scene
+       REMOTE_TABLE[remote]["active-scene"] = scene
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -229,9 +328,10 @@ def api_attach(remote, zone, scene, options):
 def api_detach(remote):
   ret = {
     "status" : 200,
+    "active" : None
   }
   REMOTE_TABLE[remote]["active-scene"] = None;
-    
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
@@ -293,21 +393,45 @@ def api_direct(device, function, zone, value):
   msg += "Volume: " + str(f.getVolume(zone))
   return msg
 
+def sceneGetAttached(scene):
+  ret = []
+  for r in REMOTE_TABLE:
+    if REMOTE_TABLE[r]["active-scene"] == scene:
+      ret.append(r)
+  return ret
+
+def sceneGetAssigned(scene):
+  ret = []
+  for z in ZONE_TABLE:
+    if ZONE_TABLE[z]["active-scene"] == scene:
+      ret.append(z)
+  return ret
+
 def isSceneActive(scene, skipRemote=None):
   for r in REMOTE_TABLE:
     if skipRemote != None and r == skipRemote:
-      continue;
+      continue
     if REMOTE_TABLE[r]["active-scene"] == scene:
       return True
   return False  
 
-def getZoneScene(zone):
+def zoneGetList():
+  ret = {}
+  for z in ZONE_TABLE:
+    ret[z] = ZONE_TABLE[z]["name"]
+  return ret
+
+def zoneGetScene(zone):
   return ZONE_TABLE[zone]["active-scene"]
 
-def sceneList(zone):
+def sceneGetList(zone):
   # First, find the capabilities of the zone
-  audio = ZONE_TABLE[zone]["audio"] != None
-  video = ZONE_TABLE[zone]["video"] != None
+  if zone is None:
+    audio = True
+    video = True
+  else:
+    audio = ZONE_TABLE[zone]["audio"] != None
+    video = ZONE_TABLE[zone]["video"] != None
   
   ret = []
   
