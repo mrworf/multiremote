@@ -90,6 +90,27 @@ SCENE_TABLE = {
     "input"       : "input-bd",
     "aux"         : "app:amazon"
   },
+
+  "ps4" : {
+    "driver"      : "ps4",
+    "name"        : "Playstation 4",
+    "description" : "Play games",
+    "audio"       : True,
+    "video"       : True,
+    "input"       : "input-cbl",
+    # Below not implemented, put there to remind me,
+    # possibly not final solution
+    "dependency"  : {
+      "driver": "splitter", 
+      "enable": [
+        "power-on", 
+        "input-1"
+      ],
+      "disable": [
+        "power-off"
+      ]
+    }
+  },
 }
 
 """
@@ -184,10 +205,9 @@ class Router (threading.Thread):
     return None
 
   def processWorkOrder(self, order):
-    zone = order.key()
+    zone, newDriver = order.popitem()
     zid = self.resolveZoneId(zone)
     oldDriver = self.getZoneDriver(zone)
-    newDriver = order.value()
     self.RouteMap[zone] = newDriver
     
     if newDriver is None:
@@ -198,8 +218,8 @@ class Router (threading.Thread):
       self.resolveDriver(self.resolveZoneAudio(zone)).setPower(zid, True)
       self.resolveDriver(newDriver).setPower(True)
 
-    if newDriver != None:
-      self.resolveDriver(self.resolveZoneAudio(zone)).setInput(zone, self.resolveInput(newDriver))    
+    if newDriver != None and newDriver != oldDriver:
+      self.resolveDriver(self.resolveZoneAudio(zone)).setInput(zid, self.resolveInput(newDriver))    
   
   def zoneUsage(self, driver):
     """Check if a driver is still in use"""
@@ -210,6 +230,8 @@ class Router (threading.Thread):
 
   def resolveScene(self, scene):
     """Resolves a scene into the underlying driver"""
+    if scene is None:
+      return None
     return SCENE_TABLE[scene]["driver"]
 
   def resolveDriver(self, driver):
@@ -304,21 +326,21 @@ def api_unassign(zone):
   ret.status_code = 200
   return ret
 
-@app.route("/attach/<remote>", defaults={"scene" : None, "options" : None})
-@app.route("/attach/<remote>/<scene>", defaults={"options" : None})
-@app.route("/attach/<remote>/<scene>/<options>")
-def api_attach(remote, scene, options):
+@app.route("/attach/<remote>", defaults={"zone" : None, "options" : None})
+@app.route("/attach/<remote>/<zone>", defaults={"options" : None})
+@app.route("/attach/<remote>/<zone>/<options>")
+def api_attach(remote, zone, options):
   ret = {
     "status" : 200,
   }
   
-  ret["active"] = REMOTE_TABLE[remote]["active-scene"]
-  if scene != None:
-    ret["users"] = sceneGetAttached(scene)
+  ret["active"] = REMOTE_TABLE[remote]["active-zone"]
+  if zone != None:
+    ret["users"] = sceneGetAttached(zone)
     if options == "check":
       pass
     else:
-       REMOTE_TABLE[remote]["active-scene"] = scene
+       REMOTE_TABLE[remote]["active-zone"] = zone
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -330,7 +352,7 @@ def api_detach(remote):
     "status" : 200,
     "active" : None
   }
-  REMOTE_TABLE[remote]["active-scene"] = None;
+  REMOTE_TABLE[remote]["active-zone"] = None;
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -355,7 +377,7 @@ def api_command(remote, command, arguments):
     "status" : 200,
   }
   # Are we even attached?
-  if REMOTE_TABLE[remote]["active-scene"] == None:
+  if REMOTE_TABLE[remote]["active-zone"] == None:
     ret["status"] = 500;
     ret["message"] = "Not attached"
   elif command == None:
@@ -393,10 +415,10 @@ def api_direct(device, function, zone, value):
   msg += "Volume: " + str(f.getVolume(zone))
   return msg
 
-def sceneGetAttached(scene):
+def sceneGetAttached(zone):
   ret = []
   for r in REMOTE_TABLE:
-    if REMOTE_TABLE[r]["active-scene"] == scene:
+    if REMOTE_TABLE[r]["active-zone"] == zone:
       ret.append(r)
   return ret
 
@@ -406,14 +428,6 @@ def sceneGetAssigned(scene):
     if ZONE_TABLE[z]["active-scene"] == scene:
       ret.append(z)
   return ret
-
-def isSceneActive(scene, skipRemote=None):
-  for r in REMOTE_TABLE:
-    if skipRemote != None and r == skipRemote:
-      continue
-    if REMOTE_TABLE[r]["active-scene"] == scene:
-      return True
-  return False  
 
 def zoneGetList():
   ret = {}
@@ -447,30 +461,37 @@ def sceneGetList(zone):
 
 def sceneListCommands(remote):
   # Resolve scene and ask
-  obj = DRIVER_TABLE[REMOTE_TABLE[remote]["active-scene"]]
+  obj = DRIVER_TABLE[REMOTE_TABLE[remote]["active-zone"]]
   ret = obj.getCommands()
   return ret
 
-def sceneExecCommand(remote, command, arguments):
+def sceneExecCommand(remote, command, *arguments):
+  print "Remote " + remote + " wants to do " + command
+  
+  # Find the zone
+  zone = REMOTE_TABLE[remote]["active-zone"]
+  zid = ZONE_TABLE[zone]["id"]
+  print "Zone is " + zone + "(" + str(zid) + ")"
+  driver = ZONE_TABLE[zone]["audio"][0];
+  driver = DRIVER_TABLE[driver]
+  
+  driver.handleCommand(zid, command, arguments)
+  
   return "OK"
 
 # This SHOULD function like the scenes
 def zoneListCommands(zone):
-  return ["power-on", 
-          "power-off",
-          "volume-up",
+  return ["volume-up",
           "volume-down",
           "volume-set",
           "volume-mute",
-          "volume-unmute",
-          "input-set"]
+          "volume-unmute"]
 
 
 if __name__ == "__main__":
   
   # Initialize the extra data we need to track stuff
   for remote in REMOTE_TABLE:
-    REMOTE_TABLE[remote]["active-scene"] = None
     REMOTE_TABLE[remote]["active-zone"] = None
 
   for zone in ZONE_TABLE:

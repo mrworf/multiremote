@@ -25,6 +25,7 @@ class DriverRXV1900:
 
   # Will be filled out by init
   RESPONSE_HANDLER = {}
+  COMMAND_HANDLER = {}
 
   SYSTEM_TABLE = {
     "zone1" : 
@@ -295,6 +296,7 @@ class DriverRXV1900:
     self.input = [None, None, None]
     self.mute = [False, False, False]
     
+    """Response code associated with function that handles it"""
     self.RESPONSE_HANDLER = {
       "20" : self.handlePower,  # Power (for all zones)
         
@@ -306,6 +308,34 @@ class DriverRXV1900:
       "24" : self.handleInput,  # Zone 2 input
       "A0" : self.handleInput,  # Zone 3 input
     }
+    
+    """Command name associated with number of arguments"""
+    self.COMMAND_HANDLER = {
+      "volume-up"     : {"arguments" : 0, "handler" : self.setVolumeUp},
+      "volume-down"   : {"arguments" : 0, "handler" : self.setVolumeDown},
+      "volume-set"    : {"arguments" : 1, "handler" : self.setVolume},
+      "volume-mute"   : {"arguments" : 0, "handler" : self.setMute, "extras" : True},
+      "volume-unmute" : {"arguments" : 0, "handler" : self.setMute, "extras" : False},
+    }
+  
+  def getCommands(self):
+    ret = {}
+    for c in self.COMMAND_HANDLER:
+      ret["c"] = self.COMMAND_HANDLER[c]["arguments"]
+    return ret
+  
+  def handleCommand(self, zone, command, *args):
+    item = self.COMMAND_HANDLER[command]
+    if item["arguments"] == 0:
+      if "extras" in item:
+        item["handler"](zone, item["extras"])
+      else:
+        item["handler"](zone)
+    elif item["arguments"] == 1:
+      if "extras" in item:
+        item["handler"](zone, args[0], item["extras"])
+      else:
+        item["handler"](zone, args[0])
   
   # Controls the power of the various zones
   #
