@@ -384,12 +384,20 @@ class DriverRXV1900:
     return self.mute[zone-1]
 
   def setVolume(self, zone, volume):
-    # Make sure we don't do silly things
+    """Setting the volume directly works as follows:
+       0-100 is -80 to 0db (00-C7)
+       100-150 is 0 to +16.5db (C7-E8)
+    """
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
 
-    return self.issueSystem(zone, "vol-set", volume)
+    if volume > 100:
+      volume = ((volume * 2) * 33) / 100
+    else:
+      volume = (volume * 199) / 100
+
+    return self.issueSystem(zone, "vol-set", "%02x" % (volume))
 
   def setVolumeUp(self, zone):
     # Make sure we don't do silly things
