@@ -115,6 +115,16 @@ class Config:
        "splitter"  : ["input-hdmi2"],
        "screen"    : []},
     ],
+    
+    "dvd"     : [
+      {"receiver"  : ["input-bd"],
+       "tv"        : ["input-hdmi1"],
+       "splitter"  : ["input-hdmi1"]},
+      {"receiver"  : ["input-bd"],
+       "projector" : ["input-hdmi1"],
+       "splitter"  : ["input-hdmi1"],
+       "screen"    : []},
+    ],
   }
 
   """
@@ -143,6 +153,14 @@ class Config:
       "description" : "Allows you to listen to music (Swedish Spotify)",
       "audio"       : True,
       "video"       : False,
+    },
+
+    "dvd" : {
+      "driver"      : "dvd",
+      "name"        : "DVD Player",
+      "description" : "Region free DVD player",
+      "audio"       : True,
+      "video"       : True,
     },
   
     "plex" : {
@@ -385,11 +403,13 @@ class Config:
       return False
     
     print "WARNING: setZoneScene() has no conflict testing yet!"
+    print "Preliminary conflict testing comes back as"
+    print repr(self.checkConflict(zone, scene))
     
     if self.SCENE_TABLE[scene]["audio"] and self.ZONE_TABLE[zone]["audio"] == None:
-      print "WARN: Zone %s does not support audio which is required by the scene %s" % (zone, scene)
+      print "WARN: Zone %s does not support audio which is provided by the scene %s" % (zone, scene)
     if self.SCENE_TABLE[scene]["video"] and self.ZONE_TABLE[zone]["video"] == None:
-      print "WARN: Zone %s does not support video which is required by the scene %s" % (zone, scene)
+      print "WARN: Zone %s does not support video which is provided by the scene %s" % (zone, scene)
     self.ZONE_TABLE[zone]["active-scene"] = scene
     
     # Handle subzones...
@@ -615,7 +635,7 @@ class Config:
         result[z] = route
     return result
 
-  def getCurrentStateForZone(self, zone, sceneOverride=None):
+  def getCurrentStateForZone(self, zone, subzone=None, sceneOverride=None):
     """
     Obtains a route for a zone based on active scene and potentially subzone.
     If provided with a sceneOverride, the active scene is ignored and the
@@ -623,6 +643,9 @@ class Config:
     """
     if not self.hasZone(zone):
       print "ERR: %s is not a zone" % zone
+      return None
+    if not sceneOverride is None and not self.hasScene(sceneOverride):
+      print "ERR: %s is not a scene" % sceneOverride
       return None
     if self.ZONE_TABLE[zone]["active-scene"] is None and sceneOverride is None:
       return None
@@ -632,8 +655,27 @@ class Config:
     else:
       s = sceneOverride
 
-    (adrv, vdrv) = self.getZoneDrivers(zone)
+    if sceneOverride is None:
+      (adrv, vdrv) = self.getZoneDrivers(zone)
+    else:
+      # We need to perform an acrobatics act here since we
+      # must resolve drivers without actually assigning them
+      if self.hasSubZones(zone):
+        if subzone is None:
+          sz = self.ZONE_TABLE[zone]["active-subzone"]
+          if sz is None:
+            sz = self.ZONE_TABLE[zone]["subzone-default"]
+        else:
+          sz = subzone
+        adrv = self.ZONE_TABLE[zone]["subzones"][sz]["audio"]
+        vdrv = self.ZONE_TABLE[zone]["subzones"][sz]["video"]
+      else:
+        adrv = self.ZONE_TABLE[zone]["audio"]
+        vdrv = self.ZONE_TABLE[zone]["video"]
+      
     sdrv = self.SCENE_TABLE[s]["driver"]
+    
+    print "S=" + repr(sdrv)
     
     # Translate into route
     if self.SCENE_TABLE[s]["audio"] and not self.SCENE_TABLE[s]["video"]:
@@ -657,7 +699,8 @@ class Config:
     
     routes = self.filterRoutes(self.ROUTING_TABLE[sdrv], drv)
     for s in opt:
-      routes = self.filterRoutes(routes, s)
+      if not s is None:
+        routes = self.filterRoutes(routes, s)
       
     if len(routes) != 1:
       print "WARN: Routing was inconclusive, got %d routes" % len(routes)
@@ -672,6 +715,7 @@ class Config:
     Removes routes which doesn't contain the driver, this function
     also deals with drivers which have multiple instances
     """
+    print "filterRoutes(%s, %s)" % (repr(routes), repr(drv))
     (drv, ext) = self.translateDriver(drv)
 
     result = []
@@ -751,4 +795,18 @@ class Config:
       return None
     
     # Now, generate a route based on provided information
-    route = self.getCurrentStateForZone(zone, scene)
+    route = self.getCurrentStateForZone(zone, None, scene)
+    
+    # Find any overlap of drivers
+    result = []
+    for z in active:
+      print "Checking zone " + z
+      for d in active[z]:
+        if d in route:
+          print "Overlap detected"
+          result.append(z)
+          break
+    
+    if len(result) > 0:
+      return result
+    return None
