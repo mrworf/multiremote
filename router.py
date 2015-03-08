@@ -1,3 +1,8 @@
+"""
+Handles the actual control of the devices.
+
+It will process the routes in an atomical way to avoid an inconsistent state.
+"""
 import threading
 import Queue
 import time
@@ -6,10 +11,10 @@ class Router (threading.Thread):
   DELAY = 30 # delay in seconds
   workList = Queue.Queue(10)
 
+  prevState = {}
+
   CONFIG = None
 
-  RouteMap = {}
-  
   def __init__(self, config):
     threading.Thread.__init__(self)
 
@@ -18,67 +23,102 @@ class Router (threading.Thread):
     self.daemon = True
     self.start()
   
-  def update(self, zone, scene):
+  def updateRoutes(self):
     """
-    If scene is None, it means to remove the input, ergo, close it. 
+    Grabs a snapshot of the current state and queues it for
+    realization.
     """
-    self.workList.put({zone : self.getSceneDriver(scene)})
+    state = self.CONFIG.getCurrentState()
+    self.workList.put(state)
   
   def run(self):
+    """Takes care of incoming routing requests"""
     while True:
       order = self.workList.get(True)
       self.processWorkOrder(order)
 
-  def getZoneDriver(self, zone):
-    if zone in self.RouteMap:
-      return self.RouteMap[zone]
-    return None
-
   def processWorkOrder(self, order):
-    zone, newDriver = order.popitem()
-    zid = self.resolveZoneId(zone)
-    oldDriver = self.getZoneDriver(zone)
-    self.RouteMap[zone] = newDriver
+    """Figures out what parts that should be kept on, off or updated"""
+    new_drivers = {}
+    keep_drivers = {}
+    inactive_drivers = []
     
-    if newDriver is None:
-      self.resolveDriver(self.resolveZoneAudio(zone)).setPower(zid, False)
-      if self.zoneUsage(oldDriver) == False:
-        self.resolveDriver(oldDriver).setPower(False)
-    elif oldDriver is None:
-      self.resolveDriver(self.resolveZoneAudio(zone)).setPower(zid, True)
-      self.resolveDriver(newDriver).setPower(True)
+    drivers = {}
+    for z in order:
+      drivers.update(order[z])
+      
+    for d in drivers:
+      if d in self.prevState:
+        keep_drivers[d] = drivers[d]
+      else:
+        new_drivers[d] = drivers[d]
+    
+    if not self.prevState is None:
+      for d in self.prevState:
+        if d not in drivers:
+          inactive_drivers.append(d)
+    
+    self.enableDrivers(new_drivers)
+    self.updateDrivers(keep_drivers)
+    self.disableDrivers(inactive_drivers)
+    
+    self.prevState = keep_drivers
+    self.prevState.update(new_drivers)
 
-    if newDriver != None and newDriver != oldDriver:
-      self.resolveDriver(self.resolveZoneAudio(zone)).setInput(zid, self.resolveInput(newDriver))    
+  def enableDrivers(self, drivers):
+    """Powers on drivers and sends list of inital commands"""
+    if drivers is None or len(drivers) == 0:
+      return
+    for d in drivers:
+      (name, zone) = self.splitDriverZone(d)
+      driver = self.CONFIG.getDriver(name)
+      if driver is None:
+        continue
+      print "DBG: Enabling %s" % driver
+      if zone is None:
+        driver.setPower(True)
+        for cmd in drivers[d]:
+          driver.handleCommand(cmd, None)
+      else:
+        driver.setPower(zone, True)
+        for cmd in drivers[d]:
+          driver.handleCommand(zone, cmd, None)
   
-  def zoneUsage(self, driver):
-    """Check if a driver is still in use"""
-    for r in self.RouteMap:
-      if self.RouteMap[r] == driver:
-        return True
-    return False
+  def disableDrivers(self, drivers):
+    """Powers off drivers"""
+    if drivers is None or len(drivers) == 0:
+      return
+    for d in drivers:
+      (name, zone) = self.splitDriverZone(d)
+      driver = self.CONFIG.getDriver(name)
+      if driver is None:
+        continue
+      print "DBG: Disabling %s" % driver
+      if zone is None:
+        driver.setPower(False)
+      else:
+        driver.setPower(zone, False)
+    
+  def updateDrivers(self, drivers):
+    """Sends new list of commands to drivers"""
+    if drivers is None or len(drivers) == 0:
+      return
+    for d in drivers:
+      (name, zone) = self.splitDriverZone(d)
+      driver = self.CONFIG.getDriver(name)
+      if driver is None:
+        continue
+      print "DBG: Updating %s" % driver
+      if zone is None:
+        for cmd in drivers[d]:
+          driver.handleCommand(cmd, None)
+      else:
+        for cmd in drivers[d]:
+          driver.handleCommand(zone, cmd, None)
 
-  def getSceneDriver(self, scene):
-    """Resolves a scene into the underlying driver"""
-    if scene is None:
-      return None
-    return SCENE_TABLE[scene]["driver"]
-
-  def resolveDriver(self, driver):
-    """Translates a driver into its object"""
-    return DRIVER_TABLE[driver]
-  
-  def resolveZoneId(self, zone):
-    """Translates the zone name into a numerical id"""
-    return ZONE_TABLE[zone]["id"]
-
-  def resolveZoneAudio(self, zone):
-    """Translates the zone name into the audio component, right now we just use the first one"""
-    return ZONE_TABLE[zone]["audio"][0]
-  
-  def resolveInput(self, driver):
-    """Translates the driver into the correct input on the receiver"""
-    for s in SCENE_TABLE:
-      if SCENE_TABLE[s]["driver"] == driver:
-        return SCENE_TABLE[s]["input"]
-    return None
+  def splitDriverZone(self, driver):
+    """Splits drivers with zoning support into two parts"""
+    ret = driver.split(":", 1)
+    if len(ret) == 1:
+      return (ret[0], None)
+    return (ret[0], ret[1])

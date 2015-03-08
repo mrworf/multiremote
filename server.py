@@ -16,10 +16,6 @@ import threading
 import Queue
 import time
 
-# Import the devices
-from driver_rxv1900 import DriverRXV1900
-from driver_spotify import DriverSpotify
-
 from router import Router
 from config import Config
 
@@ -50,10 +46,10 @@ def api_scene(scene):
   else:
     ret["scene"] = {
       "scene"       : scene,
-      "name"        : config.getScene(name)["name"],
-      "description" : config.getScene(name)["description"],
-      "zones"       : sceneGetAssigned(scene),
-      "remotes"     : sceneGetAttached(scene)
+      "name"        : config.getScene(scene)["name"],
+      "description" : config.getScene(scene)["description"],
+      "zones"       : config.getSceneZoneUsage(scene),
+      "remotes"     : config.getSceneRemoteUsage(scene)
     }
   ret = jsonify(ret)
   ret.status_code = 200
@@ -95,7 +91,8 @@ def api_assign(zone, scene, options):
 
   ret = jsonify(ret)
   ret.status_code = 200
-  #router.updateRoutes()
+
+  router.updateRoutes()
   return ret
 
 @app.route("/unassign", defaults={"zone" : None})
@@ -112,7 +109,7 @@ def api_unassign(zone):
   ret = jsonify(ret)
   ret.status_code = 200
   
-  #router.updateRoutes()
+  router.updateRoutes()
   return ret
 
 @app.route("/attach", defaults={"remote" : None, "zone" : None, "options" : None})

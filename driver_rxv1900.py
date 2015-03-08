@@ -1,22 +1,5 @@
 """
 Implementation of RX-V1900 commands
-
-Supports the required API used by receivers:
-
-setVolume(zone, value)
-setVolumeUp(zone)
-setVolumeDown(zone)
-setPower(zone, bool)
-setInput(zone, value)
-setMute(zone, bool)
-
-value = getVolume(zone)
-bool = getPower(zone)
-bool = getMute(zone)
-value = getInput(zone)
-
-
-
 """
 import requests
 
@@ -316,6 +299,9 @@ class DriverRXV1900:
       "volume-set"    : {"arguments" : 1, "handler" : self.setVolume},
       "volume-mute"   : {"arguments" : 0, "handler" : self.setMute, "extras" : True},
       "volume-unmute" : {"arguments" : 0, "handler" : self.setMute, "extras" : False},
+      "input-mdcdr"   : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-mdcdr"}, 
+      "input-bd"      : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-bd"}, 
+      "input-dvd"     : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-dvd"}, 
     }
   
   def getCommands(self):
@@ -325,6 +311,7 @@ class DriverRXV1900:
     return ret
   
   def handleCommand(self, zone, command, *args):
+    zone = int(zone)
     item = self.COMMAND_HANDLER[command]
     if item["arguments"] == 0:
       if "extras" in item:
@@ -341,6 +328,7 @@ class DriverRXV1900:
   #
   def setPower(self, zone, power):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
@@ -357,6 +345,7 @@ class DriverRXV1900:
 
   def getPower(self, zone):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
@@ -364,6 +353,7 @@ class DriverRXV1900:
     return self.power[zone-1]
     
   def setMute(self, zone, mute):
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
@@ -377,6 +367,7 @@ class DriverRXV1900:
   
   def getMute(self, zone):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
@@ -388,6 +379,7 @@ class DriverRXV1900:
        0-100 is -80 to 0db (00-C7)
        100-150 is 0 to +16.5db (C7-E8)
     """
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
@@ -401,6 +393,7 @@ class DriverRXV1900:
 
   def setVolumeUp(self, zone):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
@@ -408,6 +401,7 @@ class DriverRXV1900:
 
   def setVolumeDown(self, zone):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
@@ -415,6 +409,7 @@ class DriverRXV1900:
 
   def getVolume(self, zone):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
@@ -423,6 +418,7 @@ class DriverRXV1900:
 
   def setInput(self, zone, input):
     # Make sure we don't do silly things
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
@@ -436,6 +432,7 @@ class DriverRXV1900:
     return self.issueOperation(zone, input)
   
   def getInput(self, zone):
+    zone = int(zone)
     if zone < 1 or zone > 3:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return False
