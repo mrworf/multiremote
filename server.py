@@ -59,12 +59,17 @@ def api_scene(scene):
   ret.status_code = 200
   return ret
 
-@app.route("/assign", defaults={"zone" : None, "scene" : None})
-@app.route("/assign/<zone>", defaults={"scene" : None})
-@app.route("/assign/<zone>/<scene>")
-def api_assign(zone, scene):
-  ret = {
-  }
+@app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
+@app.route("/assign/<zone>", defaults={"scene" : None, "options" : None})
+@app.route("/assign/<zone>/<scene>", defaults={"options" : None})
+@app.route("/assign/<zone>/<scene>/<options>")
+def api_assign(zone, scene, options):
+  """
+  Options can be either clone or unassign:
+    clone = Other zones will do the same thing
+    unassign = Other zones will be unassigned
+  """
+  ret = {}
   
   if zone == None:
     ret["zones"] = config.getZoneList()
@@ -72,7 +77,20 @@ def api_assign(zone, scene):
     if scene == None:
       ret["scenes"] = config.getSceneListForZone(zone)
     else:
-      config.setZoneScene(zone, scene)
+      conflict = config.checkConflict(zone, scene)
+      if conflict is None:
+        config.setZoneScene(zone, scene)
+      else:
+        if options is None:
+          ret["conflict"] = conflict
+        elif options == "unassign":
+          for z in conflict:
+            config.clearZoneScene(z)
+          config.setZoneScene(zone, scene)
+        elif options == "clone":
+          for z in conflict:
+            config.setZoneScene(z, scene)
+          config.setZoneScene(zone, scene)            
     ret["active"] = config.getZoneScene(zone)
 
   ret = jsonify(ret)

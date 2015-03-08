@@ -322,6 +322,7 @@ class Config:
             self.ZONE_TABLE[z]["audio"] = []
           if not self.ZONE_TABLE[z]["subzones"][s]["video"] is None and self.ZONE_TABLE[z]["video"] is None:
             self.ZONE_TABLE[z]["video"] = []
+        self.ZONE_TABLE[z]["active-subzone"] = self.ZONE_TABLE[z]["subzone-default"]
         
 
   def hasScene(self, name):
@@ -402,10 +403,6 @@ class Config:
       print "ERR: %s is not a scene" % scene
       return False
     
-    print "WARNING: setZoneScene() has no conflict testing yet!"
-    print "Preliminary conflict testing comes back as"
-    print repr(self.checkConflict(zone, scene))
-    
     if self.SCENE_TABLE[scene]["audio"] and self.ZONE_TABLE[zone]["audio"] == None:
       print "WARN: Zone %s does not support audio which is provided by the scene %s" % (zone, scene)
     if self.SCENE_TABLE[scene]["video"] and self.ZONE_TABLE[zone]["video"] == None:
@@ -427,15 +424,11 @@ class Config:
     return self.ZONE_TABLE[zone]["active-scene"]
   
   def clearZoneScene(self, zone):
-    """Removes the scene for a zone, including subzones"""
+    """Removes the scene for a zone"""
     if not self.hasZone(zone):
       print "ERR: %s is not a zone" % zone
       return False
     self.ZONE_TABLE[zone]["active-scene"] = None
-    
-    # Subzones...
-    if self.hasSubZones(zone) and self.ZONE_TABLE[zone]["active-subzone"] != None:
-      self.ZONE_TABLE[zone]["active-subzone"] = None
     return True
 
   def getSubZone(self, zone):
@@ -454,14 +447,11 @@ class Config:
     return True
 
   def clearSubZone(self, zone):
-    """This one is special, if a scene is assigned, it will switch to default subzone instead"""
+    """This one is special, it will switch to default subzone"""
     if not self.hasSubZones(zone):
       print "ERR: %s does not have subzones" % zone
       return False
-    if self.getZoneScene(zone) == None:
-      self.ZONE_TABLE[zone]["active-subzone"] = None
-    else:
-      self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
+    self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
     return True
 
   def hasZoneAudio(self, zone):
