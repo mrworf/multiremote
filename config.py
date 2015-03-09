@@ -285,24 +285,21 @@ class Config:
     return True  
   
   def getZoneCommands(self, zone):
-    result = []
+    result = {}
     s = self.getZoneScene(zone)
     if s is None:
-      return []
+      return {}
     s = self.getScene(s)
     
     (adrv, vdrv) = self.getZoneDrivers(zone)
-
-    print "ADRV=" + adrv
-    print "VDRV=" + vdrv
 
     adrv = self.getDriver(adrv)
     vdrv = self.getDriver(vdrv)
 
     if adrv is not None and s["audio"]:
-      result.append(adrv.getCommands())
+      result.update(adrv.getCommands())
     if vdrv is not None and s["video"]:
-      result.append(vdrv.getCommands())
+      result.update(vdrv.getCommands())
 
     return result
     
@@ -361,7 +358,32 @@ class Config:
     result["scene"] = self.getSceneCommands(sname)
     
     return result
+
+  def execZoneCommand(self, remote, command, extras):
+    if not self.hasRemote(remote):
+      print "ERR: %s is not a remote" % remote
+      return False
+    zone = self.getRemoteZone(remote)
+    scene = self.getZoneScene(zone)
+    if scene is None:
+      return False
+    scene = self.getScene(scene)
+
+    (adrv, vdrv) = self.getZoneDrivers(zone)
+    (adrv, az) = self.splitDriver(adrv)
+    (vdrv, vz) = self.splitDriver(vdrv)
+    adrv = self.getDriver(adrv)
+    vdrv = self.getDriver(vdrv)
     
+    if adrv is not None and scene["audio"]:
+      if command in adrv.getCommands():
+        return adrv.handleCommand(az, command, extras)
+    if vdrv is not None and scene["video"]:
+      if command in vdrv.getCommands():
+        return vdrv.handleCommand(vz, command, extras)
+        
+    return False
+
   def getZoneDrivers(self, zone):
     """
     Returns the current audio and video driver. If any or both are unavailable
@@ -517,6 +539,14 @@ class Config:
       return (ret[0], "")
     else:
       return (ret[0], ":" + ret[1])
+
+  def splitDriver(self, driver):
+    """Splits the driver in two if zone is part of it"""
+    ret = driver.split(":", 1)
+    if len(ret) == 1:
+      return (ret[0], "")
+    else:
+      return (ret[0], ret[1])
       
   def translateRoute(self, zone, route):
     """

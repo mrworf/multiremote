@@ -16,7 +16,7 @@ class DriverNull:
     self.power = enable
     return True
 
-  def handleCommand(self, command, argument):
+  def handleCommand(self, zone, command, argument):
     if command not in self.COMMAND_HANDLER:
       print "ERR: %s is not a supported command" % command
       return False
@@ -32,7 +32,6 @@ class DriverNull:
         item["handler"](zone, args[0], item["extras"])
       else:
         item["handler"](zone, args[0])
-        
     return True    
   
   def getCommands(self):

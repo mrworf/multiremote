@@ -187,12 +187,28 @@ def api_command(remote, category, command, arguments):
   Executes said command supplied argument
   """
   ret = {}
+  lst = config.getRemoteCommands(remote)
+  
   if category == None:
     ret["zone"] = config.getRemoteZone(remote)
-    ret["commands"] = config.getRemoteCommands(remote)
+    ret["commands"] = lst
+  elif category == "zone":
+    if command not in lst["zone"]:
+      ret["error"] = "%s is not a zone command" % command
+    elif config.execZoneCommand(remote, command, arguments):
+      ret["result"] = "ok"
+    else:
+      ret["error"] = "%s failed" % command
+  elif category == "scene":
+    if command not in lst["zone"]:
+      ret["error"] = "%s is not a zone command" % command
+    elif config.execSceneCommand(remote, command, arguments):
+      ret["result"] = "ok"
+    else:
+      ret["error"] = "%s failed" % command
   else:
-    pass
-  
+    ret["error"] = "%s is not a supported category" % category
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret

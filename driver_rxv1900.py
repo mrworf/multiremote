@@ -238,17 +238,16 @@ class DriverRXV1900:
     
     return True
 
-  def issueSystem(self, zone, cmd, data):
-    function = self.SYSTEM_TABLE["zone" + str(zone)][cmd]
+  def issueSystem(self, zone, command, data):
+    function = self.SYSTEM_TABLE["zone" + str(zone)][command]
     
     # Convert data into what's needed
-    t = str(data)
-    if len(t) < 2:
-      t = "0" + t
-    function += t
+    param = str(data)
+    if len(param) < 2:
+      param = "0" + param
     
-    print "Zone " + str(zone) + ": " + cmd + " = " + function
-    r = requests.get(self.cfg_YamahaController + "/system/" + function)
+    print "Zone " + str(zone) + ": " + repr(command) + " = " + repr(function)
+    r = requests.get(self.cfg_YamahaController + "/system/" + function[0] + param + "/" + function[1])
     if r.status_code != 200:
       print "ERROR: Remote was unable to execute command"
       return False
@@ -363,6 +362,9 @@ class DriverRXV1900:
     return ret
   
   def handleCommand(self, zone, command, *args):
+    if not command in self.COMMAND_HANDLER:
+      print "ERR: %s is not a command" % command
+      return False
     zone = int(zone)
     item = self.COMMAND_HANDLER[command]
     if item["arguments"] == 0:
@@ -375,6 +377,7 @@ class DriverRXV1900:
         item["handler"](zone, args[0], item["extras"])
       else:
         item["handler"](zone, args[0])
+    return True
   
   # Controls the power of the various zones
   #
@@ -436,12 +439,13 @@ class DriverRXV1900:
       print "ERROR: Zone " + str(zone) + " not supported by driver"
       return 0
 
+    volume = int(volume)
     if volume > 100:
       volume = ((volume * 2) * 33) / 100
     else:
       volume = (volume * 199) / 100
 
-    return self.issueSystem(zone, "vol-set", "%02x" % (volume))
+    return self.issueSystem(zone, "vol-set", "%02x" % volume)
 
   def setVolumeUp(self, zone):
     # Make sure we don't do silly things
