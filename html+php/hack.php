@@ -81,6 +81,11 @@
     
     var oldActive = null;
     
+    function setVolume() {
+      volume = document.getElementById("volume").value;
+      alert(volume);
+    }
+    
     function setActive(obj, scene) {
       remoteAttach(scene);
       if (oldActive != null)
@@ -127,6 +132,8 @@
       <input id="mute" type="button" onclick="toggleMute()" value="Mute"/>
       <input id="voldown" type="button" onclick="remoteVolumeDown()" value="Volume Down"/>
       <input id="volup" type="button" onclick="remoteVolumeUp()" value="Volume Up"/>
+      <input style="text-align: center; width: 41pt; margin-right: 0px" type="text" id="volume" value="0"/>
+      <input style="width: 41pt; margin-left: 0px" onclick="setVolume()" type="button" value="Set"/>
     </div>
     <div class="zone" id="zone2">
       <div class="zone-hdr">

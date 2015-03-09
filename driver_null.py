@@ -4,11 +4,11 @@ necessities which a driver MUST have.
 """
 class DriverNull:
   power = False
-  commands = []
+  COMMAND_HANDLER = {}
   
   def __init__(self):
     # Dumbest driver there is
-    self.commands.append(["power-on", "power-off"])
+    pass
 
   def setPower(self, enable):
     if self.power == enable:
@@ -17,13 +17,31 @@ class DriverNull:
     return True
 
   def handleCommand(self, command, argument):
-    if command == "power-on":
-      self.setPower(True)
-    elif command == "power-off":
-      self.setPower(False)
-    else:
+    if command not in self.COMMAND_HANDLER:
+      print "ERR: %s is not a supported command" % command
       return False
-    return True
+      
+    item = self.COMMAND_HANDLER[command]
+    if item["arguments"] == 0:
+      if "extras" in item:
+        item["handler"](zone, item["extras"])
+      else:
+        item["handler"](zone)
+    elif item["arguments"] == 1:
+      if "extras" in item:
+        item["handler"](zone, args[0], item["extras"])
+      else:
+        item["handler"](zone, args[0])
+        
+    return True    
   
   def getCommands(self):
-    return self.commands
+    ret = {}
+    for c in self.COMMAND_HANDLER:
+      ret[c] = {"name": "", "description": ""}
+      if "name" in self.COMMAND_HANDLER[c]:
+        ret[c]["name"] = self.COMMAND_HANDLER[c]["name"]
+      if "description" in self.COMMAND_HANDLER[c]:
+        ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
+      ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
+    return ret  

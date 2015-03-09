@@ -201,6 +201,20 @@ class Config:
     self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
     return True
 
+  def getSubZoneList(self, zone):
+    """Get all subzones"""
+    if not self.hasZone(zone):
+      print "ERR: %s is not a zone" % zone
+      return {}
+    if not self.hasSubZones(zone):
+      print "ERR: %s does not have subzones" % zone
+      return {}
+
+    result = {}
+    for sz in self.ZONE_TABLE[zone]["subzones"]:
+      result[sz] = self.ZONE_TABLE[zone]["subzones"][sz]["name"]
+    return result
+
   def hasZoneAudio(self, zone):
     """Tests if a zone has audio capabilities"""
     if not self.hasZone(zone):
@@ -271,10 +285,38 @@ class Config:
     return True  
   
   def getZoneCommands(self, zone):
-    return []
+    result = []
+    s = self.getZoneScene(zone)
+    if s is None:
+      return []
+    s = self.getScene(s)
+    
+    (adrv, vdrv) = self.getZoneDrivers(zone)
+
+    print "ADRV=" + adrv
+    print "VDRV=" + vdrv
+
+    adrv = self.getDriver(adrv)
+    vdrv = self.getDriver(vdrv)
+
+    if adrv is not None and s["audio"]:
+      result.append(adrv.getCommands())
+    if vdrv is not None and s["video"]:
+      result.append(vdrv.getCommands())
+
+    return result
     
   def getSceneCommands(self, scene):
-    return []
+    if not self.hasScene(scene):
+      print "ERR: %s is not a scene" % scene
+      return []
+    drv = self.getDriver(self.SCENE_TABLE[scene]["driver"])
+    if drv is None:
+      print "ERR: Cannot find driver for scene %s" % scene
+      return []
+    result = drv.getCommands()
+
+    return result
 
 
   def getRemoteCommands(self, remote):
@@ -550,6 +592,10 @@ class Config:
     return None
     
   def getDriver(self, driver):
+    if driver is None:
+      return None
+      
+    (driver, ignore) = self.translateDriver(driver)
     if not driver in self.DRIVER_TABLE:
       print "ERR: %s is not a driver" % driver
       return None

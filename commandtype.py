@@ -26,3 +26,6 @@ class CommandType:
   NAVIGATE_TOPMENU      = 28
   NAVIGATE_PAGEUP       = 29
   NAVIGATE_PAGEDOWN     = 30
+
+  # Private commands aren't meant to be exposed to end-user
+  PRIVATE_INPUT         = 100

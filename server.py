@@ -36,8 +36,7 @@ def api_root():
 @app.route("/scene", defaults={"scene" : None})
 @app.route("/scene/<scene>")
 def api_scene(scene):
-  ret = {
-  }
+  ret = {}
    
   if scene is None:
     ret["scenes"] = config.getSceneList(None)
@@ -54,6 +53,30 @@ def api_scene(scene):
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
+
+@app.route("/zone", defaults={"zone" : None})
+@app.route("/zone/<zone>")
+def api_zone(zone):
+  ret = {}
+  
+  if zone is None:
+    ret["zones"] = config.getZoneList()
+  elif not config.hasZone(zone):
+    ret["error"] = "No such zone"
+  else:
+    ret = {
+      "zone"        : zone,
+      "name"        : config.getZone(zone)["name"],
+      "scene"       : config.getZoneScene(zone),
+      "remotes"     : config.getZoneRemoteList(zone)
+    }
+    if config.hasSubZones(zone):
+      ret["subzones"] = config.getSubZoneList(zone)
+      ret["subzone"] = config.getSubZone(zone)
+  ret = jsonify(ret)
+  ret.status_code = 200
+  return ret
+  
 
 @app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
 @app.route("/assign/<zone>", defaults={"scene" : None, "options" : None})

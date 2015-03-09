@@ -2,6 +2,7 @@
 Implementation of RX-V1900 commands
 """
 import requests
+from commandtype import CommandType
 
 class DriverRXV1900:
   cfg_YamahaController = "http://av-interface.sfo.sensenet.nu:5000"
@@ -294,20 +295,71 @@ class DriverRXV1900:
     
     """Command name associated with number of arguments"""
     self.COMMAND_HANDLER = {
-      "volume-up"     : {"arguments" : 0, "handler" : self.setVolumeUp},
-      "volume-down"   : {"arguments" : 0, "handler" : self.setVolumeDown},
-      "volume-set"    : {"arguments" : 1, "handler" : self.setVolume},
-      "volume-mute"   : {"arguments" : 0, "handler" : self.setMute, "extras" : True},
-      "volume-unmute" : {"arguments" : 0, "handler" : self.setMute, "extras" : False},
-      "input-mdcdr"   : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-mdcdr"}, 
-      "input-bd"      : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-bd"}, 
-      "input-dvd"     : {"arguments" : 0, "handler" : self.setInput, "extras" : "input-dvd"}, 
+      "volume-up"     : {
+        "arguments"   : 0, 
+        "handler"     : self.setVolumeUp,
+        "name"        : "Volume Up",
+        "description" : "Increases volume",
+        "type"        : CommandType.VOLUME_UP
+      },
+      "volume-down"   : {
+        "arguments"   : 0, 
+        "handler"     : self.setVolumeDown,
+        "name"        : "Volume Down",
+        "description" : "Decreases volume",
+        "type"        : CommandType.VOLUME_DOWN
+      },
+      "volume-set"    : {
+        "arguments"   : 1, 
+        "handler"     : self.setVolume,
+        "name"        : "Set Volume",
+        "description" : "Sets the volume to a specific level",
+        "type"        : CommandType.VOLUME_SET
+      },
+      "volume-mute"   : {
+        "arguments"   : 0, 
+        "handler"     : self.setMute, "extras" : True,
+        "name"        : "Mute",
+        "description" : "Mutes the audio",
+        "type"        : CommandType.VOLUME_MUTE
+      },
+      "volume-unmute" : {
+        "arguments"   : 0, 
+        "handler"     : self.setMute, "extras" : False,
+        "name"        : "Unmute",
+        "description" : "Returns audio to previous level",
+        "type"        : CommandType.VOLUME_UNMUTE
+      },
+      "input-mdcdr"   : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-mdcdr",
+        "name"        : "Input MD/CDR",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
+      "input-bd"      : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-bd",
+        "name"        : "Input BD",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
+      "input-dvd"     : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-dvd",
+        "name"        : "Input DVD",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
     }
   
   def getCommands(self):
     ret = {}
     for c in self.COMMAND_HANDLER:
-      ret["c"] = self.COMMAND_HANDLER[c]["arguments"]
+      ret[c] = {"name": "", "description": ""}
+      if "name" in self.COMMAND_HANDLER[c]:
+        ret[c]["name"] = self.COMMAND_HANDLER[c]["name"]
+      if "description" in self.COMMAND_HANDLER[c]:
+        ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
+      ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
+
     return ret
   
   def handleCommand(self, zone, command, *args):
