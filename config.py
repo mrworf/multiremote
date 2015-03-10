@@ -370,8 +370,10 @@ class Config:
     scene = self.getScene(scene)
 
     (adrv, vdrv) = self.getZoneDrivers(zone)
-    (adrv, az) = self.splitDriver(adrv)
-    (vdrv, vz) = self.splitDriver(vdrv)
+    if adrv is not None:
+      (adrv, az) = self.splitDriver(adrv)
+    if vdrv is not None:
+      (vdrv, vz) = self.splitDriver(vdrv)
     adrv = self.getDriver(adrv)
     vdrv = self.getDriver(vdrv)
     
