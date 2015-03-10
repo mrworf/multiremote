@@ -39,17 +39,17 @@
     }
     
     function remoteSetVolume(value) {
-      var url = baseURL + "/command/" + remote + "/volume-set/" + value;
+      var url = baseURL + "/command/" + remote + "/zone/volume-set/" + value;
       executeURL(url);
     }
 
     function remoteVolumeUp() {
-      var url = baseURL + "/command/" + remote + "/volume-up";
+      var url = baseURL + "/command/" + remote + "/zone/volume-up";
       executeURL(url);
     }
 
     function remoteVolumeDown() {
-      var url = baseURL + "/command/" + remote + "/volume-down";
+      var url = baseURL + "/command/" + remote + "/zone/volume-down";
       executeURL(url);
     }
 
@@ -83,7 +83,7 @@
     
     function setVolume() {
       volume = document.getElementById("volume").value;
-      alert(volume);
+      remoteSetVolume(volume)
     }
     
     function setActive(obj, scene) {
