@@ -1,0 +1,43 @@
+div.zone {
+  border: none; 
+  width: 300pt;
+  display: inline-block;
+  vertical-align: top;
+}
+
+div.volume-ctrl {
+  border: inset 2px;
+  width: 95pt;
+  display: inline-block;
+  float: left;
+}
+
+div.zone-control {
+  border-top: 1px solid;
+}
+
+div.zone-hdr {
+  text-align: center;
+  border-bottom: 1px solid;
+  font-size: 18pt;
+}
+
+input {
+  width: 85pt;
+  height: 30pt;
+  margin: 5pt;
+}
+
+.active-zone {
+  border: ridge 2px;
+  border-color: #0000ff;
+}
+
+.active-scene {
+  border: inset;
+  border-color: #00ff00;
+}
+
+.dlg-no-title .ui-dialog-titlebar {
+  display: none;
+}

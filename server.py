@@ -10,8 +10,7 @@ The whole concept is based on remotes being attached/detached to zones and
 scenes. Attach/Detach will NOT automatically power things on/off but attaching
 to a new scene will automatically detach from the previous.
 """
-from flask import Flask
-from flask import jsonify
+from flask import Flask, jsonify
 import threading
 import Queue
 import time
@@ -19,9 +18,21 @@ import time
 from router import Router
 from config import Config
 
+try:
+  from flask.ext.cors import CORS # The typical way to import flask-cors
+except ImportError:
+  # Path hack allows examples to be run without installation.
+  import os
+  parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  os.sys.path.insert(0, parentdir)
+  from flask.ext.cors import CORS
+
 cfg_ServerAddr = "0.0.0.0"
 
 app = Flask(__name__)
+cors = CORS(app) # Needed to make us CORS compatible
+
+
 config = Config()
 router = Router(config)
 
@@ -43,7 +54,7 @@ def api_scene(scene):
   elif not config.hasScene(scene):
     ret["error"] = "No such scene"
   else:
-    ret["scene"] = {
+    ret = {
       "scene"       : scene,
       "name"        : config.getScene(scene)["name"],
       "description" : config.getScene(scene)["description"],
@@ -111,6 +122,7 @@ def api_assign(zone, scene, options):
             config.setZoneScene(z, scene)
           config.setZoneScene(zone, scene)            
     ret["active"] = config.getZoneScene(zone)
+    ret["zone"] = zone
 
   ret = jsonify(ret)
   ret.status_code = 200
