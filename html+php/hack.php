@@ -30,6 +30,7 @@
     <div style="display: none">
         <input id="template-zonebtn" type="button"/>
         <input id="template-scenebtn" type="button"/>
+        <input id="template-commandbtn" type="button"/>
     </div>
     <div id="dialog-conflict" title="Conflict" style="display: none">
       <p>
@@ -51,6 +52,6 @@
     <div id="zones"></div>
     <hr/>
     <div id="scenes"></div>
-    <div id="controls"></div>
+    <div id="commands"></div>
   </body>
 </html>

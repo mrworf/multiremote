@@ -9,20 +9,18 @@ import json
 from commandtype import CommandType
 
 class DriverBasicIR(DriverNull):
-  ircmds = None
-  code_on = "on"
-  code_off = "off"
-  server = None
-
   def __init__(self, server, commandfile):
     DriverNull.__init__(self)
+
+    self.code_on = "on"
+    self.code_off = "off"
+    self.server = server
 
     jdata = open(commandfile)
     self.ircmds = json.load(jdata)
     if not "on" in self.ircmds:
       print "INFO: Using toggle for %s instead of discreet on/off" % commandfile
       code_on = code_off = "toggle"
-    self.server = server
 
     """
     By default, this driver will prefill the commandlist with PRIVATE_UNDEFINED, this way

@@ -84,6 +84,12 @@ function setActiveScene(data, reqScene) {
         $("#" + scenes[i].id).removeClass("active-scene");
       }
     };
+
+    // We need to load up available commands now
+    execServer("/command/" + remote, function(data){
+      populateCommands(data);
+    });
+
   } else {
     //alert("There was a conflict");
     $("#dialog-conflict").dialog({
@@ -212,6 +218,33 @@ function populateZones() {
       });
     };
   });
+}
+
+function addCommand(id, name, type) {
+  // Clone our nice design
+  tmpl = $("#template-commandbtn").clone().prop("id", id);
+  tmpl.attr("value", name);
+
+  tmpl.on("click", function() {
+    c = $(this).prop("id");
+    execServer("/command/" + remote + "/scene/" + c, null);
+  });
+
+  // Inject
+  $("#commands").append(tmpl);
+}
+
+
+function populateCommands(data) {
+  $("#commands").empty();
+  if (data["commands"] != null && data["commands"]["scene"] != null) {
+    data = data["commands"]["scene"]
+    for (var key in data) {
+      if (data.hasOwnProperty(key)) {
+        addCommand(key, data[key]["name"], data[key]["type"]);
+      }
+    }
+  }
 }
 
 

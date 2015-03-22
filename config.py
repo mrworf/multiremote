@@ -386,6 +386,25 @@ class Config:
         
     return False
 
+  def execSceneCommand(self, remote, command, extras):
+    if not self.hasRemote(remote):
+      print "ERR: %s is not a remote" % remote
+      return False
+    zone = self.getRemoteZone(remote)
+    scene = self.getZoneScene(zone)
+    if scene is None:
+      return False
+    scene = self.getScene(scene)
+
+    drv = self.getDriver(scene["driver"])
+    if command in drv.getCommands():
+      return drv.handleCommand(None, command, extras)
+    else:
+      print "WARN: %s is not a command" % command
+        
+    return False
+
+
   def getZoneDrivers(self, zone):
     """
     Returns the current audio and video driver. If any or both are unavailable

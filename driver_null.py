@@ -3,12 +3,11 @@ Dumbest driver of all, provides logic for power handling which is the bare
 necessities which a driver MUST have.
 """
 class DriverNull:
-  power = False
-  COMMAND_HANDLER = {}
-  
   def __init__(self):
     # Dumbest driver there is
-    pass
+    self.power = False
+    self.COMMAND_HANDLER = {}
+  
 
   def setPower(self, enable):
     if self.power == enable:
@@ -22,6 +21,7 @@ class DriverNull:
       return False
       
     item = self.COMMAND_HANDLER[command]
+    print repr(item)
     if item["arguments"] == 0:
       if "extras" in item:
         item["handler"](zone, item["extras"])
@@ -44,3 +44,16 @@ class DriverNull:
         ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
     return ret  
+
+  def addCommand(self, command, cmdtype, handler, name = None, desc = None):
+    if name == None:
+      name = command
+    if desc == None:
+      desc = name
+    self.COMMAND_HANDLER[command] = {
+      "arguments"   : 0, 
+      "handler"     : handler,
+      "name"        : name,
+      "description" : desc,
+      "type"        : cmdtype
+    }

@@ -4,6 +4,8 @@ config.py class which uses this data as it sees fit.
 """
 from driver_rxv1900 import DriverRXV1900
 from driver_spotify import DriverSpotify
+from driver_basicir import DriverBasicIR
+from driver_plex    import DriverPlex
 
 class RemoteSetup:
   """
@@ -11,11 +13,15 @@ class RemoteSetup:
   the controller.
   """
   DRIVER_TABLE = {
-    "receiver"  : DriverRXV1900(),
-    "spotify"   : DriverSpotify()
-      
+    "receiver"  : DriverRXV1900("http://av-interface.sfo.sensenet.nu:5000"),
+    "spotify"   : DriverSpotify(),
+    "splitter"  : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/splitter.json"),
+    "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/tv.json"),
+    "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/screen.json"),
+    "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/projector.json"),
+    "plex"      : DriverPlex("http://plex.sfo.sensenet.nu:3005", "00:25:22:e0:94:7d"),
   }
-  
+
   """
   This table describes how a scene can be routed to various devices.
   
@@ -76,6 +82,18 @@ class RemoteSetup:
     "spotify" : {
       "audio" : [{"receiver"  : ["input-mdcdr"]}],
     },
+
+    "plex" : {
+      "audio" : [{"receiver"  : ["input-dvr"]}],
+      "audio+video" : [
+        {"tv"         : ["input-hdmi1"],
+         "receiver"   : ["input-dvr"]},
+        {"projector"  : ["input-hdmi1"],
+         "receiver"   : ["input-dvr"],
+         "screen"     : [],
+         },
+      ]
+    },
     
     "roku"    : {
       "audio+video" : [
@@ -92,10 +110,10 @@ class RemoteSetup:
     
     "ps4"     : {
       "audio+video" : [
-        {"receiver"  : ["input-bd"],
+        {"receiver"  : ["input-cblsat"],
          "tv"        : ["input-hdmi1"],
          "splitter"  : ["input-hdmi2"]},
-        {"receiver"  : ["input-bd"],
+        {"receiver"  : ["input-cblsat"],
          "projector" : ["input-hdmi1"],
          "splitter"  : ["input-hdmi2"],
          "screen"    : []},
@@ -108,7 +126,7 @@ class RemoteSetup:
     
     "dvd"     : {
       "audio+video" : [
-        {"receiver"  : ["input-bd"],
+        {"receiver"  : ["input-cblsat"],
          "tv"        : ["input-hdmi1"],
          "splitter"  : ["input-hdmi1"]},
         {"receiver"  : ["input-bd"],
@@ -117,7 +135,7 @@ class RemoteSetup:
          "screen"    : []},
       ],
       "audio" : [
-        {"receiver"  : ["input-bd"],
+        {"receiver"  : ["input-cblsat"],
          "splitter"  : ["input-hdmi1"]},
       ],
     }

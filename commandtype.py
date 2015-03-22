@@ -6,7 +6,7 @@ class CommandType:
   VOLUME_SET      = 5   # Takes argument, 0-100 = 0-100% volume, 100-150 = 0-50% above 0dB
 
   PLAYBACK_PLAY         = 10
-  PLAYBACK_PAUSE        = 11 # DOES NOT TOGGLE, PLAYBACK_PLAY must be issued to resume
+  PLAYBACK_PAUSE        = 11
   PLAYBACK_STOP         = 11
   PLAYBACK_NEXT         = 12 
   PLAYBACK_PREVIOUS     = 13 
