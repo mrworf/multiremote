@@ -5,7 +5,7 @@ import requests
 from commandtype import CommandType
 
 class DriverRXV1900:
-  cfg_YamahaController = "http://av-interface.sfo.sensenet.nu:5000"
+  cfg_YamahaController = None
 
   # Will be filled out by init
   RESPONSE_HANDLER = {}
@@ -205,6 +205,7 @@ class DriverRXV1900:
     return
     
   def handleInput(self, cmd, data):
+    # Translate zone info
     if cmd == "21":
       z = 0
     elif cmd == "24":
@@ -214,8 +215,8 @@ class DriverRXV1900:
     else:
       print "WARN: Unknown command " + cmd
       return
-    # now, lets translate
-    self.input[z] = self.MAP_INPUT[z][int(data)]
+    # now, lets translate the actual input that happened
+    self.input[z] = self.MAP_INPUT[z][int(data, 16)]
     print "INFO: Input for zone " + str(z+1) + " is " + str(self.input[z])
     
   
@@ -224,7 +225,7 @@ class DriverRXV1900:
     print "zone" + str(zone) + ": " + cmd + " = " + repr(function)
     r = requests.get(self.cfg_YamahaController + "/operation/" + function[0] + "/" + function[1])
     if r.status_code != 200:
-      print "ERROR: Remote was unable to execute command"
+      print "ERROR: Remote was unable to execute command %s" % cmd
       return False
 
     j = r.json()
@@ -272,7 +273,8 @@ class DriverRXV1900:
       self.RESPONSE_HANDLER[result["command"]](result["command"], result["data"])
     return
   
-  def __init__(self):
+  def __init__(self, server):
+    self.cfg_YamahaController = server
     # Some tracking stuff
     self.power = [False, False, False]
     self.volume = [0, 0, 0]
@@ -345,6 +347,12 @@ class DriverRXV1900:
         "arguments"   : 0, 
         "handler"     : self.setInput, "extras" : "input-dvd",
         "name"        : "Input DVD",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
+      "input-dvr"   : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-dvr",
+        "name"        : "Input DVR",
         "type"        : CommandType.PRIVATE_INPUT
       }, 
     }

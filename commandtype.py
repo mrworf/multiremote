@@ -29,3 +29,6 @@ class CommandType:
 
   # Private commands aren't meant to be exposed to end-user
   PRIVATE_INPUT         = 100
+
+  # Undefined should NEVER be used, but are handy for automatic prefill
+  PRIVATE_UNDEFINED     = 10000

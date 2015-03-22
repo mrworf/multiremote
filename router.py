@@ -78,7 +78,7 @@ class Router (threading.Thread):
       if zone is None:
         driver.setPower(True)
         for cmd in drivers[d]:
-          driver.handleCommand(cmd, None)
+          driver.handleCommand(None, cmd, None)
       else:
         driver.setPower(zone, True)
         for cmd in drivers[d]:
@@ -111,7 +111,7 @@ class Router (threading.Thread):
       print "DBG: Updating %s" % driver
       if zone is None:
         for cmd in drivers[d]:
-          driver.handleCommand(cmd, None)
+          driver.handleCommand(None, cmd, None)
       else:
         for cmd in drivers[d]:
           driver.handleCommand(zone, cmd, None)
