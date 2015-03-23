@@ -1,0 +1,3 @@
+This folder includes various extras which may be needed by the setup.
+
+etherwake is special, it's required to support waking up HTPCs
