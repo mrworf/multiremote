@@ -212,8 +212,8 @@ def api_command(remote, category, command, arguments):
     else:
       ret["error"] = "%s failed" % command
   elif category == "scene":
-    if command not in lst["zone"]:
-      ret["error"] = "%s is not a zone command" % command
+    if command not in lst["scene"]:
+      ret["error"] = "%s is not a scene command" % command
     elif config.execSceneCommand(remote, command, arguments):
       ret["result"] = "ok"
     else:

@@ -33,6 +33,7 @@ class DriverPlex(DriverNull):
     self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
 
   def setPower(self, enable):
+    print "INFO: setPower called"
     if self.mac == None:
       print "WARN: DriverPlex is not configured to support power management"
       return

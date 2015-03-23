@@ -387,6 +387,7 @@ class Config:
     return False
 
   def execSceneCommand(self, remote, command, extras):
+    print "DBG: execSceneCommand called"
     if not self.hasRemote(remote):
       print "ERR: %s is not a remote" % remote
       return False
