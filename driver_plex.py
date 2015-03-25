@@ -12,7 +12,7 @@ from commandtype import CommandType
 import subprocess
 
 class DriverPlex(DriverNull):
-  def __init__(self, server, macaddress = None):
+  def __init__(self, server, macaddress = None, iface = "eth0"):
     DriverNull.__init__(self)
 
     self.urlPlayback = "/player/playback/"
@@ -20,6 +20,7 @@ class DriverPlex(DriverNull):
 
     self.server = server
     self.mac = macaddress
+    self.iface = iface
 
     self.addCommand("up",     CommandType.NAVIGATE_UP,      self.navUp)
     self.addCommand("down",   CommandType.NAVIGATE_DOWN,    self.navDown)
@@ -32,6 +33,12 @@ class DriverPlex(DriverNull):
     self.addCommand("pause",  CommandType.PLAYBACK_PAUSE,   self.playbackPause)
     self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
 
+    self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
+
+    self.addCommand("+30s",   CommandType.PLAYBACK_SKIP_FORWARD,   self.playbackSkip, None, None, "stepForward")
+    self.addCommand("-15s",   CommandType.PLAYBACK_SKIP_BACKWARD,  self.playbackSkip, None, None, "stepBack")
+
+
   def setPower(self, enable):
     print "INFO: setPower called"
     if self.mac == None:
@@ -39,10 +46,12 @@ class DriverPlex(DriverNull):
       return
 
     if self.power == enable:
+      print "DBG: Power was already set to " + repr(enable)
       return True
 
     if enable:
-      subprocess.call(['extras/etherwake', self.mac])
+      print "DBG Calling etherwake with: '-i', '%s', '%s'" % (self.iface, self.mac)
+      subprocess.call(['extras/etherwake', '-i', self.iface, self.mac])
     else:
       print "DBG: Power off isn't implemented yet"
 
@@ -76,6 +85,9 @@ class DriverPlex(DriverNull):
 
   def playbackStop(self, zone):
     self.execServer(self.urlPlayback + "stop")
+
+  def playbackSkip(self, zone, size):
+    self.execServer(self.urlPlayback + size)
 
   def execServer(self, url):
     print "INFO: DriverPlex -> " + url

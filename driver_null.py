@@ -45,15 +45,25 @@ class DriverNull:
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
     return ret  
 
-  def addCommand(self, command, cmdtype, handler, name = None, desc = None):
+  def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None):
     if name == None:
       name = command
     if desc == None:
       desc = name
-    self.COMMAND_HANDLER[command] = {
-      "arguments"   : 0, 
-      "handler"     : handler,
-      "name"        : name,
-      "description" : desc,
-      "type"        : cmdtype
-    }
+    if extras == None:
+      self.COMMAND_HANDLER[command] = {
+        "arguments"   : 0, 
+        "handler"     : handler,
+        "name"        : name,
+        "description" : desc,
+        "type"        : cmdtype
+      }
+    else:
+      self.COMMAND_HANDLER[command] = {
+        "arguments"   : 0, 
+        "handler"     : handler,
+        "name"        : name,
+        "description" : desc,
+        "type"        : cmdtype,
+        "extras"      : extras
+      }
