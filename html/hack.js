@@ -205,22 +205,21 @@ function populateScenes(zone) {
   execServer("/assign/" + zone, function(data1) {
     // Add the power-off scene
     addPowerOff(zone, data1["active"] == null);
-
-    for (var i = 0; i < data1["scenes"].length; i++) {
-      execServer("/scene/" + data1["scenes"][i], function(data2) {
-        addScene(zone, data2, data1["active"]);
-      });
-    };
+    execServer("/scene", function(data2) {
+      for (var i = 0; i < data1["scenes"].length; i++) {
+        addScene(zone, data2[data1["scenes"][i]], data1["active"]);
+      }
+    });
   });
 
 }
 
 function populateZones() {
   execServer("/zone", function(data) {
-    for (var i = 0; i < data["zones"].length; i++) {
-      execServer("/zone/" + data["zones"][i], function(data) {
-        addZone(data);
-      });
+    for (var key in data) {
+      if (data.hasOwnProperty(key)) {
+        addZone(data[key]);
+      }
     };
   });
 }
