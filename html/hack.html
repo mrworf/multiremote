@@ -1,29 +1,11 @@
-<?php
-
-  $remote = "kitchen";
-  $name = "Kitchen";
-  $homezone = "zone2";
-  switch ($_SERVER["REMOTE_ADDR"]) {
-    case "10.0.3.104":
-      $remote = "livingroom";
-      $name = "Livingroom";
-      $homezone = "zone1";
-      break;
-  }
-
-?>
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="jquery-ui.min.css">
     <link rel="stylesheet" type="text/css" href="hack.css">
+    <script src="json2.js" type="text/javascript"></script>
     <script src="jquery2.min.js" type="text/javascript"></script>
     <script src="jquery-ui.min.js" type="text/javascript"></script>
-    <script type="text/javascript">
-      <!-- This will move away as soon as settings is implemented -->
-      var baseURL = "http://" + window.location.hostname + ":5000";
-      var remote = "<?php print($remote); ?>"
-      var homezone = "<?php print($homezone); ?>"
-    </script>    
+    <script src="jstorage.js" type="text/javascript"></script>
     <script src="hack.js" type="text/javascript"></script>
   </style>
   <body>
@@ -34,14 +16,14 @@
     </div>
     <div id="dialog-conflict" title="Conflict" style="display: none">
       <p>
-        Selecting SCENE would interfer with another user in ZONE.
+        Selecting <span id="dlg-scene">SCENE</span> would interfer with another user in <span id="dlg-zone">ZONE</span>.
       </p>
       <p>
         How would you like to resolve this?
       </p>
     </div>
 
-    <h1>multiREMOTE - <?php print($name); ?></h1>
+    <h1>multiREMOTE - <span id="remote-name">n/a</span></h1>
     <div class="volume-ctrl">
       <input id="mute" type="button" onclick="toggleMute()" value="Mute"/>
       <input id="voldown" type="button" onclick="remoteVolumeDown()" value="Volume Down"/>

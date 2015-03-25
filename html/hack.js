@@ -1,10 +1,15 @@
 var zoneList = [];
 var activeZone = null;
 
+var cfg_baseURL = null;
+var cfg_name = null;
+var cfg_home = null;
+var cfg_id = null;
+
 function execServer(addr, successFunc) {
   console.log("execServer(" + addr + ")");
   $.ajax({ 
-    url: baseURL + addr,
+    url: cfg_baseURL + addr,
     type: "GET",
     success: successFunc,
     error: function(obj, info, t) {
@@ -23,34 +28,34 @@ function remoteAssign(scene) {
 }
 
 function remoteSetVolume(value) {
-  execServer("/command/" + remote + "/zone/volume-set/" + value, null);
+  execServer("/command/" + cfg_id + "/zone/volume-set/" + value, null);
 }
 
 function remoteVolumeUp() {
-  execServer("/command/" + remote + "/zone/volume-up", null);
+  execServer("/command/" + cfg_id + "/zone/volume-up", null);
 }
 
 function remoteVolumeDown() {
-  execServer("/command/" + remote + "/zone/volume-down", null);
+  execServer("/command/" + cfg_id + "/zone/volume-down", null);
 }
 
 function toggleMute() {
   var obj = document.getElementById("mute");
   if (obj.value == "Mute") {
-    remoteMute(remote);
+    remoteMute(cfg_id);
     obj.value = "Unmute";
   } else {
-    remoteUnmute(remote);
+    remoteUnmute(cfg_id);
     obj.value = "Mute";
   }
 }
 
 function remoteMute() {
-  execServer("/command/" + remote + "/volume-mute", null);
+  execServer("/command/" + cfg_id + "/volume-mute", null);
 }
 
 function remoteUnmute() {
-  execServer("/command/" + remote + "/volume-unmute", null);
+  execServer("/command/" + cfg_id + "/volume-unmute", null);
 }
 
 function setVolume() {
@@ -142,7 +147,7 @@ function addZone(data) {
   tmpl.attr("value", data["name"]);
   tmpl.on("click", function() {
     z = $(this).prop("id");
-    execServer("/attach/" + remote + "/" + z, function(data){
+    execServer("/attach/" + cfg_id + "/" + z, function(data){
         setActiveZone(data);
       });
   });
@@ -227,7 +232,7 @@ function addCommand(id, name, type) {
 
   tmpl.on("click", function() {
     c = $(this).prop("id");
-    execServer("/command/" + remote + "/scene/" + c, null);
+    execServer("/command/" + cfg_id + "/scene/" + c, null);
   });
 
   // Inject
@@ -247,8 +252,19 @@ function populateCommands(data) {
   }
 }
 
-
 $( function() {
+  cfg_name = $.jStorage.get("cfg-name");
+  cfg_id = $.jStorage.get("cfg-id");
+  cfg_home = $.jStorage.get("cfg-home");
+  cfg_baseURL = "http://" + window.location.hostname + ":5000";
+
+  if (cfg_name == null || cfg_home == null || cfg_id == null) {
+    window.location = "settings.html";
+    return;
+  }
+
+  $("#remote-name").text(cfg_name);
+
   // prep our dialog
   populateZones();
 })
