@@ -306,11 +306,11 @@ class Config:
   def getSceneCommands(self, scene):
     if not self.hasScene(scene):
       print "ERR: %s is not a scene" % scene
-      return []
+      return {}
     drv = self.getDriver(self.SCENE_TABLE[scene]["driver"])
     if drv is None:
       print "ERR: Cannot find driver for scene %s" % scene
-      return []
+      return {}
     result = drv.getCommands()
 
     return result
@@ -352,7 +352,7 @@ class Config:
     sname = self.getZoneScene(zname)
     if sname is None:
       print "WARN: Zone %s is not assigned a scene" % zname
-      return []
+      #return []
     
     result["zone"] = self.getZoneCommands(zname)
     result["scene"] = self.getSceneCommands(sname)
