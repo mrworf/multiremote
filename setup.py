@@ -19,7 +19,7 @@ class RemoteSetup:
     "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/tv.json"),
     "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/screen.json"),
     "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/projector.json"),
-    "plex"      : DriverPlex("http://plex.sfo.sensenet.nu:3005", "00:25:22:e0:94:7d"),
+    "plex"      : DriverPlex("http://plex.sfo.sensenet.nu:3005", "00:25:22:e0:94:7d", "eth1"),
   }
 
   """
