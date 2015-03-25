@@ -6,6 +6,7 @@ from driver_rxv1900 import DriverRXV1900
 from driver_spotify import DriverSpotify
 from driver_basicir import DriverBasicIR
 from driver_plex    import DriverPlex
+from driver_roku    import DriverRoku
 
 class RemoteSetup:
   """
@@ -17,9 +18,11 @@ class RemoteSetup:
     "spotify"   : DriverSpotify(),
     "splitter"  : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/splitter.json"),
     "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/tv.json"),
+    "dvd"       : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/dvd.json"),
     "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/screen.json"),
     "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/projector.json"),
-    "plex"      : DriverPlex("http://plex.sfo.sensenet.nu:3005", "00:25:22:e0:94:7d", "eth1"),
+    "plex"      : DriverPlex("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth1"),
+    "roku"      : DriverRoku("roku.sfo.sensenet.nu"),
   }
 
   """
@@ -197,7 +200,7 @@ class RemoteSetup:
     "amazon" : {
       "driver"        : "roku",
       "driver-extras" : "app=amazon",
-      "name"          : "Amazon",
+      "name"          : "Amazon Prime",
       "description"   : "Watch movies and TV series",
       "audio"         : True,
       "video"         : True,
