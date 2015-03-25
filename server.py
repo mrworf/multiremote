@@ -50,17 +50,25 @@ def api_scene(scene):
   ret = {}
    
   if scene is None:
-    ret["scenes"] = config.getSceneList(None)
+    scenes = config.getSceneList(None)
   elif not config.hasScene(scene):
     ret["error"] = "No such scene"
+    scenes = None
   else:
-    ret = {
-      "scene"       : scene,
-      "name"        : config.getScene(scene)["name"],
-      "description" : config.getScene(scene)["description"],
-      "zones"       : config.getSceneZoneUsage(scene),
-      "remotes"     : config.getSceneRemoteUsage(scene)
-    }
+    scenes = [scene]
+
+  if scenes is not None:
+    for scene in scenes:
+      ret[scene] = {
+        "scene"       : scene,
+        "name"        : config.getScene(scene)["name"],
+        "description" : config.getScene(scene)["description"],
+        "zones"       : config.getSceneZoneUsage(scene),
+        "remotes"     : config.getSceneRemoteUsage(scene)
+      }
+    if len(scenes) == 1:
+      ret = ret[scenes[0]]
+      
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
@@ -71,19 +79,26 @@ def api_zone(zone):
   ret = {}
   
   if zone is None:
-    ret["zones"] = config.getZoneList()
+    zones = config.getZoneList();
   elif not config.hasZone(zone):
     ret["error"] = "No such zone"
+    zones = None
   else:
-    ret = {
-      "zone"        : zone,
-      "name"        : config.getZone(zone)["name"],
-      "scene"       : config.getZoneScene(zone),
-      "remotes"     : config.getZoneRemoteList(zone)
-    }
-    if config.hasSubZones(zone):
-      ret["subzones"] = config.getSubZoneList(zone)
-      ret["subzone"] = config.getSubZone(zone)
+    zones = [zone]
+
+  if zones is not None:
+    for zone in zones:
+      ret[zone] = {
+        "zone"        : zone,
+        "name"        : config.getZone(zone)["name"],
+        "scene"       : config.getZoneScene(zone),
+        "remotes"     : config.getZoneRemoteList(zone)
+      }
+      if config.hasSubZones(zone):
+        ret[zone]["subzones"] = config.getSubZoneList(zone)
+        ret[zone]["subzone"] = config.getSubZone(zone)
+    if len(zones) == 1:
+      ret = ret[zones[0]]
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
