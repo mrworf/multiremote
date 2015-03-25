@@ -1,7 +1,9 @@
 """
 Plex Home Theater driver
+Talks to a specified Plex Home Theater client over network and uses 
+Wake-On-Lan to wake it from sleep.
 
-
+Note! Currently no way of placing PHT back to sleep after usage.
 """
 
 from driver_null import DriverNull
@@ -18,7 +20,7 @@ class DriverPlex(DriverNull):
     self.urlPlayback = "/player/playback/"
     self.urlNavigate = "/player/navigation/"
 
-    self.server = server
+    self.server = "http://" + server + ":3005/"
     self.mac = macaddress
     self.iface = iface
 
@@ -28,35 +30,28 @@ class DriverPlex(DriverNull):
     self.addCommand("right",  CommandType.NAVIGATE_RIGHT,   self.navRight)
     self.addCommand("enter",  CommandType.NAVIGATE_ENTER,   self.navEnter)
     self.addCommand("back",   CommandType.NAVIGATE_BACK,    self.navBack)
+    self.addCommand("home",   CommandType.NAVIGATE_HOME,    self.navHome)
 
     self.addCommand("play",   CommandType.PLAYBACK_PLAY,    self.playbackPlay)
     self.addCommand("pause",  CommandType.PLAYBACK_PAUSE,   self.playbackPause)
-    self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
-
     self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
 
     self.addCommand("+30s",   CommandType.PLAYBACK_SKIP_FORWARD,   self.playbackSkip, None, None, "stepForward")
     self.addCommand("-15s",   CommandType.PLAYBACK_SKIP_BACKWARD,  self.playbackSkip, None, None, "stepBack")
 
 
-  def setPower(self, enable):
-    print "INFO: setPower called"
+  def eventOn(self):
     if self.mac == None:
       print "WARN: DriverPlex is not configured to support power management"
       return
+    subprocess.call(['extras/etherwake', '-i', self.iface, self.mac])
 
-    if self.power == enable:
-      print "DBG: Power was already set to " + repr(enable)
-      return True
-
-    if enable:
-      print "DBG Calling etherwake with: '-i', '%s', '%s'" % (self.iface, self.mac)
-      subprocess.call(['extras/etherwake', '-i', self.iface, self.mac])
-    else:
-      print "DBG: Power off isn't implemented yet"
-
-    self.power = enable
-    return True
+  def eventOff(self):
+    # Stop and navigate home (avoid leaving it playing)
+    self.playbackStop()
+    self.navHome()
+    # Sorry, no power control yet
+    print "DBG: Power off isn't implemented yet"
 
   def navUp(self, zone):
     self.execServer(self.urlNavigate + "moveUp")
@@ -76,6 +71,9 @@ class DriverPlex(DriverNull):
 
   def navBack(self, zone):
     self.execServer(self.urlNavigate + "back")
+
+  def navHome(self, zone):
+    self.execServer(self.urlNavigate + "home")
 
   def playbackPlay(self, zone):
     self.execServer(self.urlPlayback + "play")

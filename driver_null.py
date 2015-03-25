@@ -13,7 +13,41 @@ class DriverNull:
     if self.power == enable:
       return True
     self.power = enable
+    if enable:
+      self.eventOn()
+    else:
+      self.eventOff()
     return True
+
+  def eventOn(self):
+    pass
+
+  def eventOff(self):
+    pass
+
+  def applyExtras(self, keyvaluepairs):
+    """
+    Called when this device is selected as a scene, can be called more
+    than once during a powered session, since user may switch between
+    different scenes which all use the same driver but different extras.
+
+    By default, this parses a string that looks like this:
+      key=valuue,key=value,...
+    And calls handleExtras() with a dict, but drivers can override this
+    if needed. Otherwise, handleExtras is the recommended override method.
+    """
+    result = {}
+    pairs = keyvaluepairs.split(",")
+    for pair in pairs:
+      parts = pair.split(",", 1)
+      if len(parts) == 2:
+        result[parts[0].trim()] = parts[1].trim()
+    if len(result) > 0:
+      self.handleExtras(result)
+
+  def handleExtras(self, keyvalue):
+    """Override this to handle extra data"""
+    pass
 
   def handleCommand(self, zone, command, argument):
     if command not in self.COMMAND_HANDLER:
