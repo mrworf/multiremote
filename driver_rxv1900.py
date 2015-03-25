@@ -35,8 +35,8 @@ class DriverRXV1900:
         "power_off" : ["E7F", "20"],
         "mute"      : ["EA2", "23"],
         "unmute"    : ["EA3", "23"],
-        "vol-up"    : ["A1A", "26"],
-        "vol-down"  : ["A1B", "26"],
+        "vol-up"    : ["A1A", None],
+        "vol-down"  : ["A1B", None],
           
         "input-phono"   : ["A14", "21"],
         "input-cd"      : ["A15", "21"],
@@ -61,8 +61,8 @@ class DriverRXV1900:
         "power_off" : ["EBB", "20"],
         "mute"      : ["EA0", "25"],
         "unmute"    : ["EA1", "25"],
-        "vol-up"    : ["ADA", "27"],
-        "vol-down"  : ["ADB", "27"],
+        "vol-up"    : ["ADA", None],
+        "vol-down"  : ["ADB", None],
           
         "input-phono"   : ["AD0", "24"],
         "input-cd"      : ["AD1", "24"],
@@ -86,8 +86,8 @@ class DriverRXV1900:
         "power_off" : ["AEE", "20"],
         "mute"      : ["E26", "A1"],
         "unmute"    : ["E66", "A1"],
-        "vol-up"    : ["AFD", "A2"],
-        "vol-down"  : ["AFE", "A2"],
+        "vol-up"    : ["AFD", None],
+        "vol-down"  : ["AFE", None],
           
         "input-phono"   : ["AF1", "A0"],
         "input-cd"      : ["AF2", "A0"],
@@ -223,7 +223,12 @@ class DriverRXV1900:
   def issueOperation(self, zone, cmd):
     function = self.OPERATION_TABLE["zone" + str(zone)][cmd]
     print "zone" + str(zone) + ": " + cmd + " = " + repr(function)
-    r = requests.get(self.cfg_YamahaController + "/operation/" + function[0] + "/" + function[1])
+
+    url = self.cfg_YamahaController + "/operation/" + function[0]
+    if function[1] != None:
+      url += "/" + function[1]
+
+    r = requests.get(url)
     if r.status_code != 200:
       print "ERROR: Remote was unable to execute command %s" % cmd
       return False
@@ -235,7 +240,8 @@ class DriverRXV1900:
       print "ERROR: Remote received command but failed to execute"
       return False
     
-    self.interpretResult(j["result"])
+    if function[1] != None:
+      self.interpretResult(j["result"])
     
     return True
 
@@ -248,7 +254,11 @@ class DriverRXV1900:
       param = "0" + param
     
     print "Zone " + str(zone) + ": " + repr(command) + " = " + repr(function)
-    r = requests.get(self.cfg_YamahaController + "/system/" + function[0] + param + "/" + function[1])
+    url = self.cfg_YamahaController + "/system/" + function[0] + param
+    if function[1] != None:
+      url += "/" + function[1]
+
+    r = requests.get(url)
     if r.status_code != 200:
       print "ERROR: Remote was unable to execute command"
       return False
@@ -258,8 +268,9 @@ class DriverRXV1900:
     if j["status"] != 200:
       print "ERROR: Remote received command but failed to execute"
       return False
-    
-    self.interpretResult(j["result"])
+
+    if function[1] != None:    
+      self.interpretResult(j["result"])
     
     return True
   
