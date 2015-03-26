@@ -6,11 +6,18 @@ var cfg_name = null;
 var cfg_home = null;
 var cfg_id = null;
 
-function execServer(addr, successFunc) {
+// Holds the list of zones
+var cfg_zones = null;
+
+// Holds the list of scenes
+var cfg_scenes = null;
+
+function execServer(addr, successFunc, sync = false) {
   console.log("execServer(" + addr + ")");
   $.ajax({ 
     url: cfg_baseURL + addr,
     type: "GET",
+    async: !sync,
     success: successFunc,
     error: function(obj, info, t) {
       alert("Failed to execute request due to:\n" + info );
@@ -51,11 +58,11 @@ function toggleMute() {
 }
 
 function remoteMute() {
-  execServer("/command/" + cfg_id + "/volume-mute", null);
+  execServer("/command/" + cfg_id + "/zone/volume-mute", null);
 }
 
 function remoteUnmute() {
-  execServer("/command/" + cfg_id + "/volume-unmute", null);
+  execServer("/command/" + cfg_id + "/zone/volume-unmute", null);
 }
 
 function setVolume() {
@@ -91,33 +98,97 @@ function setActiveScene(data, reqScene) {
     };
 
     // We need to load up available commands now
-    execServer("/command/" + remote, function(data){
+    execServer("/command/" + cfg_id, function(data){
       populateCommands(data);
     });
 
   } else {
-    //alert("There was a conflict");
-    $("#dialog-conflict").dialog({
-      modal: true,
-      resizable: false,
-      dialogClass: "dlg-no-title",
-      buttons: {
-        "Play SCENE in ZONE as well" : function() { 
+    showConflictInfo(data["conflict"], reqScene);
+  }
+}
+
+function showConflictDialog(details, reqScene) {
+    scene = cfg_scenes[reqScene]["name"];
+    zones = "";
+    scenes = "";
+    differs = false;
+
+    for (detail in details) {
+      zones += " and " + detail;
+      if (scenes.indexOf(" and " + details[detail]) == -1)
+        scenes += " and " + details[detail];
+      if (details[detail] != scene)
+        differs = true;
+    }
+    zones = zones.substring(5);
+    scenes = scenes.substring(5);
+
+    str_they = "they are";
+    str_are = "are";
+
+    if (Object.keys(details).length == 1) {
+      str_they = "it's";
+      str_are = "is";
+    }
+
+    /* We really should detect what the user is doing, setting the same scene should have a different warning */
+    var str_clone;
+    var str_unassign;
+
+    if (differs) {
+      $("#conflict-text").text("Selecting " + scene + " will cause problems for " + zones + " since " + str_they + " using " + scenes);
+      str_clone = "Play " + scene + " in " + zones + " as well";
+      str_unassign = "Place " + zones + " in standby and play here only";
+    } else {
+      $("#conflict-text").text(zones + " " + str_are + " already playing " + scene);
+      str_clone = "Play " + scene + " here as well";
+      str_unassign = "Place " + zones + " in standby and play " + scene + " here only";
+    }
+
+    buttons = {};
+    buttons[str_clone] = function() { 
           $(this).dialog("close"); 
           execServer("/assign/" + activeZone + "/" + reqScene + "/clone", function(data){
             setActiveScene(data, reqScene);
           });
-        },
-        "Shutdown ZONE and play here only" : function() { 
+        };
+    buttons[str_unassign] = function() { 
           $(this).dialog("close"); 
           execServer("/assign/" + activeZone + "/" + reqScene + "/unassign", function(data){
             setActiveScene(data, reqScene);
           });
-        },
-        "Cancel" : function() { $(this).dialog("close"); },
-      }
+        };
+    buttons["Cancel"] = function() { $(this).dialog("close"); };
+
+    $("#dialog-conflict").dialog({
+      modal: true,
+      resizable: false,
+      width: "30%",
+      dialogClass: "dlg-no-title",
+      buttons: buttons
     });
-  }
+
+}
+
+/**
+ * Takes an array of zone(s) and the requested scene which is causing a conflict
+ * and translates the zones into human-readble information in the terms of
+ *   <zone name>:<current scene name>
+ * and then calls showConflictDialog() to request the user to take action.
+ */
+function showConflictInfo(zones, reqScene) {
+  result = [];
+  execServer("/zone", function(data) {
+    cfg_zones = data;
+    for (var i = 0; i != zones.length; ++i) {
+      zone = zones[i];
+      if (data.hasOwnProperty(zone)) {
+        result[cfg_zones[zone]["name"]] = cfg_scenes[cfg_zones[zone]["scene"]]["name"];
+      }
+    }
+
+    showConflictDialog(result, reqScene);
+  });
 }
 
 function setActiveZone(data) {
@@ -206,6 +277,8 @@ function populateScenes(zone) {
     // Add the power-off scene
     addPowerOff(zone, data1["active"] == null);
     execServer("/scene", function(data2) {
+      cfg_scenes = data2;
+
       for (var i = 0; i < data1["scenes"].length; i++) {
         addScene(zone, data2[data1["scenes"][i]], data1["active"]);
       }
@@ -216,6 +289,7 @@ function populateScenes(zone) {
 
 function populateZones() {
   execServer("/zone", function(data) {
+  	cfg_zones = data;
     for (var key in data) {
       if (data.hasOwnProperty(key)) {
         addZone(data[key]);

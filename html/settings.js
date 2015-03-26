@@ -37,7 +37,7 @@ $( function() {
       $("#cfg-id").val() != "" &&
       $("#cfg-home").val() != ""
     ) {
-      window.location = "hack.php";
+      window.location = "client.html";
       return;
     }
   });
