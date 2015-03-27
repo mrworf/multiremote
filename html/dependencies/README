@@ -1,0 +1,9 @@
+This folder should contain the following frameworks (downloaded separately):
+
+  jquery v2
+  jquery-ui
+  json2
+  jstorage
+
+To simplify jQuery usage from the example html code, please make a symlink
+(or rename) jQuery-X.Y.Z.min.js to jquery2.min.js or it will not work.
