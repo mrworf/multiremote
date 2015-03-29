@@ -16,11 +16,11 @@ class RemoteSetup:
   DRIVER_TABLE = {
     "receiver"  : DriverRXV1900("http://av-interface.sfo.sensenet.nu:5000"),
     "spotify"   : DriverSpotify(),
-    "splitter"  : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/splitter.json"),
-    "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/tv.json"),
-    "dvd"       : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/dvd.json"),
-    "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/screen.json"),
-    "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "ir-codes/projector.json"),
+    "splitter"  : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/accessories/sony-hdmiswitch.json"),
+    "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/displays/lg-55la7400.json"),
+    "dvd"       : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/players/dvd.json"),
+    "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/accessories/elite_screens-electric100h.json"),
+    "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/displays/jvc-rs1.json"),
     "plex"      : DriverPlex("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth1"),
     "roku"      : DriverRoku("roku.sfo.sensenet.nu"),
   }
