@@ -4,9 +4,10 @@ config.py class which uses this data as it sees fit.
 """
 from driver_rxv1900 import DriverRXV1900
 from driver_spotify import DriverSpotify
-from driver_basicir import DriverBasicIR
+from driver_irplus  import DriverIRPlus
 from driver_plex    import DriverPlex
 from driver_roku    import DriverRoku
+from driver_basicir import DriverBasicIR
 
 class RemoteSetup:
   """
@@ -18,9 +19,9 @@ class RemoteSetup:
     "spotify"   : DriverSpotify(),
     "splitter"  : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/accessories/sony-hdmiswitch.json"),
     "tv"        : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/displays/lg-55la7400.json"),
-    "dvd"       : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/players/dvd.json"),
+    "dvd"       : DriverIRPlus("http://av-interface.sfo.sensenet.nu:5001", "config/dvd.json"),
     "screen"    : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/accessories/elite_screens-electric100h.json"),
-    "projector" : DriverBasicIR("http://av-interface.sfo.sensenet.nu:5001", "../ir-devices/displays/jvc-rs1.json"),
+    "projector" : DriverIRPlus("http://av-interface.sfo.sensenet.nu:5001", "config/projector.json"),
     "plex"      : DriverPlex("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth1"),
     "roku"      : DriverRoku("roku.sfo.sensenet.nu"),
   }
@@ -91,7 +92,7 @@ class RemoteSetup:
       "audio+video" : [
         {"tv"         : ["input-hdmi1"],
          "receiver"   : ["input-dvr"]},
-        {"projector"  : ["input-hdmi1"],
+        {"projector"  : [],
          "receiver"   : ["input-dvr"],
          "screen"     : [],
          },
@@ -101,45 +102,45 @@ class RemoteSetup:
     "roku"    : {
       "audio+video" : [
         {"tv"        : ["input-hdmi1"],
-         "receiver"  : ["input-bd"]},
-        {"projector" : ["input-hdmi1"],
-         "receiver"  : ["input-bd"],
+         "receiver"  : ["input-dvd"]},
+        {"projector" : [],
+         "receiver"  : ["input-dvd"],
          "screen"    : []}
       ],
       "audio" : [
-        {"receiver"  : ["input-bd"]},
+        {"receiver"  : ["input-dvd"]},
       ],
     },
     
     "ps4"     : {
       "audio+video" : [
-        {"receiver"  : ["input-cblsat"],
+        {"receiver"  : ["input-cbl"],
          "tv"        : ["input-hdmi1"],
          "splitter"  : ["input-hdmi2"]},
-        {"receiver"  : ["input-cblsat"],
-         "projector" : ["input-hdmi1"],
+        {"receiver"  : ["input-cbl"],
+         "projector" : [],
          "splitter"  : ["input-hdmi2"],
          "screen"    : []},
       ],
       "audio" : [
-        {"receiver"  : ["input-bd"],
+        {"receiver"  : ["input-cbl"],
          "splitter"  : ["input-hdmi2"]},
       ]
     },
     
     "dvd"     : {
       "audio+video" : [
-        {"receiver"  : ["input-cblsat"],
+        {"receiver"  : ["input-cbl"],
          "tv"        : ["input-hdmi1"],
-         "splitter"  : ["input-hdmi1"]},
-        {"receiver"  : ["input-bd"],
-         "projector" : ["input-hdmi1"],
-         "splitter"  : ["input-hdmi1"],
+         "splitter"  : ["input-hdmi3"]},
+        {"receiver"  : ["input-cbl"],
+         "projector" : [],
+         "splitter"  : ["input-hdmi3"],
          "screen"    : []},
       ],
       "audio" : [
-        {"receiver"  : ["input-cblsat"],
-         "splitter"  : ["input-hdmi1"]},
+        {"receiver"  : ["input-cbl"],
+         "splitter"  : ["input-hdmi3"]},
       ],
     }
   }
