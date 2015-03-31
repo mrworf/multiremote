@@ -74,7 +74,7 @@ class DriverRoku(DriverNull):
 
   def getApps(self):
     result = {}
-    r = request.get(self.server + "query/apps")
+    r = requests.get(self.server + "query/apps")
     tree = ElementTree.fromstring(r.content)
     if tree.tag != "apps":
       print "ERR: Roku didn't respond with apps list"
@@ -90,37 +90,37 @@ class DriverRoku(DriverNull):
     return result
 
   def startApp(self, appid):
-    request.get(self.server + "launch/" + appid)
+    requests.get(self.server + "launch/" + appid)
 
   def navUp(self, zone):
-    request.get(self.server + "keypress/Up")
+    requests.get(self.server + "keypress/Up")
 
   def navDown(self, zone):
-    request.get(self.server + "keypress/Down")
+    requests.get(self.server + "keypress/Down")
 
   def navLeft(self, zone):
-    request.get(self.server + "keypress/Left")
+    requests.get(self.server + "keypress/Left")
 
   def navRight(self, zone):
-    request.get(self.server + "keypress/Right")
+    requests.get(self.server + "keypress/Right")
 
   def navEnter(self, zone):
-    request.get(self.server + "keypress/Select")
+    requests.get(self.server + "keypress/Select")
 
   def navBack(self, zone):
-    request.get(self.server + "keypress/Back")
+    requests.get(self.server + "keypress/Back")
 
   def navHome(self, zone):
-    request.get(self.server + "keypress/Home")
+    requests.get(self.server + "keypress/Home")
 
   def playbackInfo(self, zone):
-    request.get(self.server + "keypress/Info")
+    requests.get(self.server + "keypress/Info")
 
   def playbackPlay(self, zone):
-    request.get(self.server + "keypress/Play")
+    requests.get(self.server + "keypress/Play")
 
   def playbackFF(self, zone):
-    request.get(self.server + "keypress/Fwd")
+    requests.get(self.server + "keypress/Fwd")
 
   def playbackRW(self, zone):
-    request.get(self.server + "keypress/Rev")
+    requests.get(self.server + "keypress/Rev")
