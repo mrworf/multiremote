@@ -102,7 +102,30 @@ def api_zone(zone):
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
-  
+
+@app.route("/subzone/<zone>", defaults={"subzone" : None})
+@app.route("/subzone/<zone>/<subzone>")
+def api_subzone(zone, subzone):
+  """ Changes the subzone for a specific zone
+  """
+  ret = {}
+  if not config.hasSubZones(zone):
+    ret["error"] = "Zone does not have subzones"
+  elif subzone is None:
+    ret["subzones"] = config.getSubZoneList(zone)
+  elif not config.hasSubZone(zone, subzone):
+    ret["error"] = "Zone does not have specified subzone"
+  else:
+    config.setSubZone(zone, subzone)
+    router.updateRoutes()
+    ret["subzone"] = config.getSubZone(zone)
+
+  if config.hasSubZones(zone):
+    ret["active-subzone"] = config.getSubZone(zone)
+  ret["zone"] = zone
+  ret = jsonify(ret)
+  ret.status_code = 200
+  return ret
 
 @app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
 @app.route("/assign/<zone>", defaults={"scene" : None, "options" : None})
