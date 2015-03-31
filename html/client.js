@@ -12,12 +12,11 @@ var cfg_zones = null;
 // Holds the list of scenes
 var cfg_scenes = null;
 
-function execServer(addr, successFunc, sync = false) {
+function execServer(addr, successFunc) {
   console.log("execServer(" + addr + ")");
   $.ajax({ 
     url: cfg_baseURL + addr,
     type: "GET",
-    async: !sync,
     success: successFunc,
     error: function(obj, info, t) {
       alert("Failed to execute request due to:\n" + info );
@@ -271,6 +270,7 @@ function addPowerOff(zone, standby) {
 function populateScenes(zone) {
   // First, clear out existing
   $("#scenes").empty();
+  $("#commands").empty();
 
   // Query and react
   execServer("/assign/" + zone, function(data1) {
@@ -282,6 +282,11 @@ function populateScenes(zone) {
       for (var i = 0; i < data1["scenes"].length; i++) {
         addScene(zone, data2[data1["scenes"][i]], data1["active"]);
       }
+    });
+
+    // We also need to fill out any active scene's commands
+    execServer("/command/" + cfg_id, function(data){
+      populateCommands(data);
     });
   });
 
