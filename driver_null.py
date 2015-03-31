@@ -2,6 +2,8 @@
 Dumbest driver of all, provides logic for power handling which is the bare
 necessities which a driver MUST have.
 """
+from commandtype import CommandType
+
 class DriverNull:
   def __init__(self):
     # Dumbest driver there is
@@ -50,27 +52,32 @@ class DriverNull:
     pass
 
   def handleCommand(self, zone, command, argument):
+    result = None
     if command not in self.COMMAND_HANDLER:
       print "ERR: %s is not a supported command" % command
-      return False
+      return result
       
     item = self.COMMAND_HANDLER[command]
     print repr(item)
     if item["arguments"] == 0:
       if "extras" in item:
-        item["handler"](zone, item["extras"])
+        result = item["handler"](zone, item["extras"])
       else:
-        item["handler"](zone)
+        result = item["handler"](zone)
     elif item["arguments"] == 1:
       if "extras" in item:
-        item["handler"](zone, args[0], item["extras"])
+        result = item["handler"](zone, args[0], item["extras"])
       else:
-        item["handler"](zone, args[0])
-    return True    
+        result = item["handler"](zone, args[0])
+    return result
   
   def getCommands(self):
     ret = {}
     for c in self.COMMAND_HANDLER:
+      # Do not expose certain commands
+      if self.COMMAND_HANDLER[c]["type"] > CommandType.LIMIT_GETCOMMANDS:
+        continue
+
       ret[c] = {"name": "", "description": ""}
       if "name" in self.COMMAND_HANDLER[c]:
         ret[c]["name"] = self.COMMAND_HANDLER[c]["name"]
