@@ -1,0 +1,10 @@
+{
+  "file" : "../ir-devices/displays/jvc-rs1.json",
+  "commands" : {
+    "on" : { "type" : 901 },
+    "off" : {
+      "type" : 902,
+      "sequence" : "off,100,off"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "file" : "../ir-devices/players/dvd.json",
+  "commands" : {
+    "on" : {
+      "type" : 901,
+      "sequence" : "toggle"
+    },
+    "off" : {
+      "type" : 902,
+      "sequence" : "toggle"
+    },
+
+    "angle" : { "type" : 118 },
+    "play"  : { "type" : 100 },
+    "pause" : { "type" : 101 },
+    "stop"  : { "type" : 102 },
+    "nextchapter" : { "type" : 105 },
+    "prevchapter" : { "type" : 106 },
+    "eject" : { "type" : 120 },
+
+    "up"    : { "type" : 200 },
+    "down"  : { "type" : 201 },
+    "left"  : { "type" : 202 },
+    "right" : { "type" : 203 },
+    "enter" : { "type" : 204 },
+    "topmenu" : { "type" : 208 },
+    "menu" : { "type" : 207 },
+    "return" : { "type" : 205 }
+  }
+}
