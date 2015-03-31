@@ -39,7 +39,6 @@ class DriverPlex(DriverNull):
     self.addCommand("+30s",   CommandType.PLAYBACK_SKIP_FORWARD,   self.playbackSkip, None, None, "stepForward")
     self.addCommand("-15s",   CommandType.PLAYBACK_SKIP_BACKWARD,  self.playbackSkip, None, None, "stepBack")
 
-
   def eventOn(self):
     if self.mac == None:
       print "WARN: DriverPlex is not configured to support power management"
