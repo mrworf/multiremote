@@ -366,6 +366,18 @@ class DriverRXV1900:
         "name"        : "Input DVR",
         "type"        : CommandType.PRIVATE_INPUT
       }, 
+      "input-cbl"      : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-cbl",
+        "name"        : "Input CBL",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
+      "input-dvd"      : {
+        "arguments"   : 0, 
+        "handler"     : self.setInput, "extras" : "input-dvd",
+        "name"        : "Input DVD",
+        "type"        : CommandType.PRIVATE_INPUT
+      }, 
     }
   
   def getCommands(self):
@@ -381,22 +393,23 @@ class DriverRXV1900:
     return ret
   
   def handleCommand(self, zone, command, *args):
+    result = None
     if not command in self.COMMAND_HANDLER:
       print "ERR: %s is not a command" % command
-      return False
+      return result
     zone = int(zone)
     item = self.COMMAND_HANDLER[command]
     if item["arguments"] == 0:
       if "extras" in item:
-        item["handler"](zone, item["extras"])
+        result = item["handler"](zone, item["extras"])
       else:
-        item["handler"](zone)
+        result = item["handler"](zone)
     elif item["arguments"] == 1:
       if "extras" in item:
-        item["handler"](zone, args[0], item["extras"])
+        result = item["handler"](zone, args[0], item["extras"])
       else:
-        item["handler"](zone, args[0])
-    return True
+        result = item["handler"](zone, args[0])
+    return result
   
   # Controls the power of the various zones
   #
