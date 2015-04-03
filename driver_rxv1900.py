@@ -234,7 +234,7 @@ class DriverRXV1900:
       return False
 
     j = r.json()
-    print repr(j);
+    #print repr(j);
     
     if j["status"] != 200:
       print "ERROR: Remote received command but failed to execute"
