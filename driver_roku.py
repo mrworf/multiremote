@@ -25,7 +25,7 @@ class DriverRoku(DriverNull):
   def __init__(self, server):
     DriverNull.__init__(self)
 
-    self.server = "http://" + server + ":8090/"
+    self.server = "http://" + server + ":8060/"
     self.home = None
 
     self.addCommand("up",     CommandType.NAVIGATE_UP,      self.navUp)
@@ -49,7 +49,7 @@ class DriverRoku(DriverNull):
       return
     self.startApp(self.home)
 
-  def handleExtras(self, extras):
+  def eventExtras(self, extras):
     """
     Two ways of doing this, either we are told the ID, or we need to
     do a text search. Obviously text search using app=XXX is convenient
@@ -62,7 +62,8 @@ class DriverRoku(DriverNull):
     if "app" in extras:
       k = extras["app"].lower()
       for key in self.apps:
-        if k.find(key.lower()) > -1:
+        print "DBG: Testing \"%s\" for \"%s\", returning %d" % (key.lower(), k.lower(), key.lower().find(k))
+        if key.lower().find(k) > -1:
           self.startApp(self.apps[key])
           break
     elif "appid" in extras:
@@ -73,6 +74,7 @@ class DriverRoku(DriverNull):
           break
 
   def getApps(self):
+    print "DBG: getApps() called"
     result = {}
     r = requests.get(self.server + "query/apps")
     tree = ElementTree.fromstring(r.content)
@@ -87,40 +89,44 @@ class DriverRoku(DriverNull):
       if branch.tag != "app" or branch.attrib["type"] != "appl":
         continue
       result[branch.text] = int(branch.attrib["id"])
+    print "DBG: getApps() = " + repr(result)
     return result
 
   def startApp(self, appid):
-    requests.get(self.server + "launch/" + appid)
+    print "DBG: Starting %slaunch/%d" % (self.server, appid)
+    requests.post("%slaunch/%d" % (self.server, appid))
 
   def navUp(self, zone):
-    requests.get(self.server + "keypress/Up")
+    print "DBG: Roku navUp: " + self.server + "keypress/Up"
+    r = requests.post(self.server + "keypress/Up")
+    print repr(r)
 
   def navDown(self, zone):
-    requests.get(self.server + "keypress/Down")
+    requests.post(self.server + "keypress/Down")
 
   def navLeft(self, zone):
-    requests.get(self.server + "keypress/Left")
+    requests.post(self.server + "keypress/Left")
 
   def navRight(self, zone):
-    requests.get(self.server + "keypress/Right")
+    requests.post(self.server + "keypress/Right")
 
   def navEnter(self, zone):
-    requests.get(self.server + "keypress/Select")
+    requests.post(self.server + "keypress/Select")
 
   def navBack(self, zone):
-    requests.get(self.server + "keypress/Back")
+    requests.post(self.server + "keypress/Back")
 
   def navHome(self, zone):
-    requests.get(self.server + "keypress/Home")
+    requests.post(self.server + "keypress/Home")
 
   def playbackInfo(self, zone):
-    requests.get(self.server + "keypress/Info")
+    requests.post(self.server + "keypress/Info")
 
   def playbackPlay(self, zone):
-    requests.get(self.server + "keypress/Play")
+    requests.post(self.server + "keypress/Play")
 
   def playbackFF(self, zone):
-    requests.get(self.server + "keypress/Fwd")
+    requests.post(self.server + "keypress/Fwd")
 
   def playbackRW(self, zone):
-    requests.get(self.server + "keypress/Rev")
+    requests.post(self.server + "keypress/Rev")
