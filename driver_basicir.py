@@ -15,6 +15,7 @@ class DriverBasicIR(DriverNull):
     self.code_on = "on"
     self.code_off = "off"
     self.server = server
+    self.file = commandfile
 
     jdata = open(commandfile)
     self.ircmds = json.load(jdata)
@@ -37,21 +38,13 @@ class DriverBasicIR(DriverNull):
         "type"        : CommandType.PRIVATE_UNDEFINED
       }
 
-  def setPower(self, enable):
-    """
-    We need to override this and use the on/off pair or toggle to handle
-    power.
-    """
-    if self.power == enable:
-      return True
+  def eventOn(self):
+    print "DBG: eventOff() for %s" % self.file
+    self.sendIr(self.code_on)
 
-    if enable:
-      self.sendIr(self.code_on)
-    else:
-      self.sendIr(self.code_off)
-
-    self.power = enable
-    return True
+  def eventOff(self):
+    print "DBG: eventOn() for %s" % self.file
+    self.sendIr(self.code_off)
 
   def sendCommand(self, zone, command):
     self.sendIr(command)
