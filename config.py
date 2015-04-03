@@ -427,7 +427,7 @@ class Config:
     """
     Shows the current state which indicates what's going on.
     Format:
-    {<zone> : [<driver>, ...]}
+    {<zone> : [<driver> : { "commands" : [<command>, ...], "extras" : <string>}, ...], ...}
     
     Some examples...
     PS4 is playing in Zone1 and Spotify in Zone2:
@@ -454,8 +454,12 @@ class Config:
     
     for z in self.ZONE_TABLE:
       route = self.getCurrentStateForZone(z)
+      scene = self.getScene(self.getZoneScene(z))
       if not route is None:
-        result[z] = route
+        result[z] = {"route" : route}
+        if scene is not None and "driver-extras" in scene:
+          result[z]["extras"] = {scene["driver"] : scene["driver-extras"]}
+
     return result
 
   def getCurrentStateForZone(self, zone, subzone=None, sceneOverride=None):
@@ -499,6 +503,11 @@ class Config:
     sdrv = self.SCENE_TABLE[s]["driver"]
     
     # Translate into route
+    if "driver-extras" in self.SCENE_TABLE[s]:
+      extras = self.SCENE_TABLE[s]["driver-extras"]
+    else:
+      extras = None
+
     if self.SCENE_TABLE[s]["audio"] and not self.SCENE_TABLE[s]["video"]:
       route = self.resolveRoute(sdrv, adrv, None)
     elif self.SCENE_TABLE[s]["audio"] and self.SCENE_TABLE[s]["video"]:
@@ -507,6 +516,7 @@ class Config:
       print "ERR: Video only zones are not supported"
     else:
       print "ERR: Scene has neither audio nor video!"
+
     return self.translateRoute(zone, route)
 
   def resolveRoute(self, sdrv, adrv, vdrv):
