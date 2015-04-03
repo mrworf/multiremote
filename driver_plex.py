@@ -20,7 +20,7 @@ class DriverPlex(DriverNull):
     self.urlPlayback = "/player/playback/"
     self.urlNavigate = "/player/navigation/"
 
-    self.server = "http://" + server + ":3005/"
+    self.server = "http://" + server + ":3005"
     self.mac = macaddress
     self.iface = iface
 
@@ -47,8 +47,8 @@ class DriverPlex(DriverNull):
 
   def eventOff(self):
     # Stop and navigate home (avoid leaving it playing)
-    self.playbackStop()
-    self.navHome()
+    self.playbackStop(None)
+    self.navHome(None)
     # Sorry, no power control yet
     print "DBG: Power off isn't implemented yet"
 
@@ -90,5 +90,5 @@ class DriverPlex(DriverNull):
     print "INFO: DriverPlex -> " + url
     r = requests.get(self.server + url)
     if r.status_code != 200:
-      print "ERROR: Driver was unable to execute %s" % url
+      print "ERROR: Driver was unable to execute %s due to %s" % (self.server + url, repr(r))
       return False
