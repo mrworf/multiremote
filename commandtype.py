@@ -1,4 +1,23 @@
+""" CommandType class contains all the various types of commands,
+    depending on the type and flag(s), there may be different
+    behaviors exposed in the various drivers and/or server.
+"""
 class CommandType:
+  """ Flags to be used to indicate various special states of the defined
+      command.
+  """
+  FLAG_NONE       = 0 # No flags (duh)
+  FLAG_HIDDEN     = 1 # Do not expose through getCommands() api
+  FLAG_KEEP_STATE = 2 # Automatically track state, meaning that multiple
+                      # calls to this command (or commands sharing same type)
+                      # will automatically be tracked and only one call comes
+                      # through, ie:
+                      # call1, call1, call1, call2, call1 -> call1, call2, call1
+  FLAG_RESULT     = 4 # This command will return a result
+
+
+  """ Definition of commands 
+  """
   VOLUME_UP       = 1
   VOLUME_DOWN     = 2
   VOLUME_MUTE     = 3
