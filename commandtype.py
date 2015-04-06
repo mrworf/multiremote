@@ -61,6 +61,7 @@ class CommandType:
   NAVIGATE_TOPMENU      = 208
   NAVIGATE_PAGEUP       = 209
   NAVIGATE_PAGEDOWN     = 210
+  NAVIGATE_TEXTINPUT    = 211
 
   LIMIT_GETCOMMANDS     = 499 # The maximum allowed exposed command through getCommands()
   """
