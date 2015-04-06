@@ -36,10 +36,12 @@ class DriverRoku(DriverNull):
     self.addCommand("back",   CommandType.NAVIGATE_BACK,    self.navBack)
     self.addCommand("home",   CommandType.NAVIGATE_HOME,    self.navHome)
 
-    self.addCommand("info",    CommandType.PLAYBACK_OSD,          self.playbackInfo)
-    self.addCommand("play",    CommandType.PLAYBACK_PLAY,         self.playbackPlay)
-    self.addCommand("rewind",  CommandType.PLAYBACK_REWIND,       self.playbackRW)
-    self.addCommand("forward", CommandType.PLAYBACK_FASTFORWARD,  self.playbackFF)
+    self.addCommand("info",     CommandType.PLAYBACK_OSD,           self.playbackInfo)
+    self.addCommand("play",     CommandType.PLAYBACK_PLAY,          self.playbackPlay)
+    self.addCommand("rewind",   CommandType.PLAYBACK_REWIND,        self.playbackRW)
+    self.addCommand("forward",  CommandType.PLAYBACK_FASTFORWARD,   self.playbackFF)
+
+    self.addCommand("text",     CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
   def eventOff(self):
     if self.home == None:
@@ -130,3 +132,18 @@ class DriverRoku(DriverNull):
 
   def playbackRW(self, zone):
     requests.post(self.server + "keypress/Rev")
+
+  def navTextInput(self, zone, txt):
+    """ This function is somewhat limited since it does not care about
+        handling special characters at all (they should be UTF-8 encoded)
+        But it allows us to start using text input at least
+    """
+    for l in txt:
+      if l == 0x0D or l == 0x0A:
+        l = "Enter"
+      elif l == 0x08:
+        l = "Backspace"
+      else:
+        l = "Lit_" + l
+      requests.post(self.server + "keypress/" + l)
+

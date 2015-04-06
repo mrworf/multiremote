@@ -19,6 +19,7 @@ class DriverPlex(DriverNull):
 
     self.urlPlayback = "/player/playback/"
     self.urlNavigate = "/player/navigation/"
+    self.urlApp = "/player/application/"
 
     self.server = "http://" + server + ":3005"
     self.mac = macaddress
@@ -38,6 +39,8 @@ class DriverPlex(DriverNull):
 
     self.addCommand("+30s",   CommandType.PLAYBACK_SKIP_FORWARD,   self.playbackSkip, None, None, "stepForward")
     self.addCommand("-15s",   CommandType.PLAYBACK_SKIP_BACKWARD,  self.playbackSkip, None, None, "stepBack")
+
+    self.addCommand("text",   CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
   def eventOn(self):
     if self.mac == None:
@@ -92,3 +95,11 @@ class DriverPlex(DriverNull):
     if r.status_code != 200:
       print "ERROR: Driver was unable to execute %s due to %s" % (self.server + url, repr(r))
       return False
+
+  def navTextInput(self, zone, txt):
+    """ This function is somewhat limited since it does not care about
+        handling special characters at all (they should be UTF-8 encoded)
+        But it allows us to start using text input at least
+    """
+    self.execServer(self.urlApp + "sendString?text=" + txt)
+
