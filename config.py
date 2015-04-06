@@ -453,7 +453,7 @@ class Config:
     result = {}
     
     for z in self.ZONE_TABLE:
-      route = self.getCurrentStateForZone(z)
+      route = self.getCurrentRouteForZone(z)
       scene = self.getScene(self.getZoneScene(z))
       if not route is None:
         result[z] = {"route" : route}
@@ -462,7 +462,7 @@ class Config:
 
     return result
 
-  def getCurrentStateForZone(self, zone, subzone=None, sceneOverride=None):
+  def getCurrentRouteForZone(self, zone, subzone=None, sceneOverride=None):
     """
     Obtains a route for a zone based on active scene and potentially subzone.
     If provided with a sceneOverride, the active scene is ignored and the
@@ -637,15 +637,15 @@ class Config:
       return None
     
     # Now, generate a route based on provided information
-    route = self.getCurrentStateForZone(zone, None, scene)
+    route = self.getCurrentRouteForZone(zone, None, scene)
     
     # Find any overlap of drivers
     result = []
     for z in active:
       print "Checking zone " + z
-      for d in active[z]:
+      for d in active[z]["route"]:
         if d in route:
-          print "Overlap detected"
+          print "Overlap detected, %s is already in use"
           result.append(z)
           break
     
