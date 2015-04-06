@@ -148,6 +148,7 @@ def api_assign(zone, scene, options):
       conflict = config.checkConflict(zone, scene)
       if conflict is None:
         config.setZoneScene(zone, scene)
+        router.updateRoutes()
       else:
         if options is None:
           ret["conflict"] = conflict
@@ -155,17 +156,18 @@ def api_assign(zone, scene, options):
           for z in conflict:
             config.clearZoneScene(z)
           config.setZoneScene(zone, scene)
+          router.updateRoutes()
         elif options == "clone":
           for z in conflict:
             config.setZoneScene(z, scene)
           config.setZoneScene(zone, scene)            
+          router.updateRoutes()
     ret["active"] = config.getZoneScene(zone)
     ret["zone"] = zone
 
   ret = jsonify(ret)
   ret.status_code = 200
 
-  router.updateRoutes()
   return ret
 
 @app.route("/unassign", defaults={"zone" : None})
