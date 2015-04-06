@@ -125,7 +125,7 @@ class DriverNull:
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
     return ret  
 
-  def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None):
+  def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None, args = 0):
     """ Convenience function, allows adding commands to the list which
         is exposed by getCommands() and handleCommand()
     """
@@ -135,7 +135,7 @@ class DriverNull:
       desc = name
     if extras == None:
       self.COMMAND_HANDLER[command] = {
-        "arguments"   : 0, 
+        "arguments"   : args, 
         "handler"     : handler,
         "name"        : name,
         "description" : desc,
@@ -143,7 +143,7 @@ class DriverNull:
       }
     else:
       self.COMMAND_HANDLER[command] = {
-        "arguments"   : 0, 
+        "arguments"   : args, 
         "handler"     : handler,
         "name"        : name,
         "description" : desc,
