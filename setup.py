@@ -9,6 +9,8 @@ from driver_plex    import DriverPlex
 from driver_roku    import DriverRoku
 from driver_basicir import DriverBasicIR
 
+from commandtype import CommandType
+
 class RemoteSetup:
   """
   Lists and loads the various devices which will be needed by
@@ -171,6 +173,7 @@ class RemoteSetup:
       "description" : "Allows you to listen to music (Swedish Spotify)",
       "audio"       : True,
       "video"       : False,
+      "ux-hint"     : "android-app=com.spotify.music,category=music",
     },
 
     "dvd" : {
@@ -179,6 +182,7 @@ class RemoteSetup:
       "description" : "Region free DVD player",
       "audio"       : True,
       "video"       : True,
+      "ux-hint"     : "category=video",
     },
   
     "plex" : {
@@ -187,6 +191,7 @@ class RemoteSetup:
       "description" : "Watch movies and TV series",
       "audio"       : True,
       "video"       : True,
+      "ux-hint"     : "category=video",
     },
     
     "netflix" : {
@@ -196,6 +201,7 @@ class RemoteSetup:
       "description"   : "Watch movies and TV series",
       "audio"         : True,
       "video"         : True,
+      "ux-hint"     : "category=video",
     },
   
     "amazon" : {
@@ -205,6 +211,7 @@ class RemoteSetup:
       "description"   : "Watch movies and TV series",
       "audio"         : True,
       "video"         : True,
+      "ux-hint"     : "category=video",
     },
   
     "ps4" : {
@@ -213,6 +220,7 @@ class RemoteSetup:
       "description" : "Play games",
       "audio"       : True,
       "video"       : True,
+      "ux-hint"     : "category=gaming",
     },
   }
   
