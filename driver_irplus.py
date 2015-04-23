@@ -44,6 +44,7 @@ from driver_null import DriverNull
 import requests
 import base64
 import json
+import time
 from commandtype import CommandType
 
 class DriverIRPlus(DriverNull):
@@ -100,7 +101,7 @@ class DriverIRPlus(DriverNull):
     seq = command.split(",")
     for cmd in seq:
       if cmd.isdigit():
-        time.sleep(int(cmd))
+        time.sleep(int(cmd)/1000.0)
       else:
         self.sendIr(cmd)
 
