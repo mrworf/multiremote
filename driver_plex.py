@@ -27,6 +27,7 @@ import base64
 import json
 from commandtype import CommandType
 import subprocess
+import logging
 
 class DriverPlex(DriverNull):
   def __init__(self, server, macaddress = None, iface = "eth0"):
@@ -59,7 +60,7 @@ class DriverPlex(DriverNull):
 
   def eventOn(self):
     if self.mac == None:
-      print "WARN: DriverPlex is not configured to support power management"
+      logging.warning("DriverPlex is not configured to support power management")
       return
     subprocess.call(['extras/etherwake', '-i', self.iface, self.mac])
 
@@ -68,13 +69,13 @@ class DriverPlex(DriverNull):
     self.playbackStop(None)
     self.navHome(None)
     # Sorry, no power control yet
-    print "DBG: Power off isn't implemented yet"
+    logging.debug("Power off isn't implemented yet")
 
   def navUp(self, zone):
     self.execServer(self.urlNavigate + "moveUp")
 
   def navDown(self, zone):
-    print "INFO: Hello"
+    logging.info("Hello")
     self.execServer(self.urlNavigate + "moveDown")
 
   def navLeft(self, zone):
@@ -105,10 +106,10 @@ class DriverPlex(DriverNull):
     self.execServer(self.urlPlayback + size)
 
   def execServer(self, url):
-    print "INFO: DriverPlex -> " + url
+    logging.info("DriverPlex -> " + url)
     r = requests.get(self.server + url)
     if r.status_code != 200:
-      print "ERROR: Driver was unable to execute %s due to %s" % (self.server + url, repr(r))
+      logging.error("Driver was unable to execute %s due to %s" % (self.server + url, repr(r)))
       return False
 
   def navTextInput(self, zone, txt):

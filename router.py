@@ -21,6 +21,7 @@ It will process the routes in an atomical way to avoid an inconsistent state.
 import threading
 import Queue
 import time
+import logging
 
 class Router (threading.Thread):
   DELAY = 30 # delay in seconds
@@ -44,7 +45,7 @@ class Router (threading.Thread):
     realization.
     """
     state = self.CONFIG.getCurrentState()
-    print "DBG: Queuing route change " + repr(state)
+    logger.debug("Queuing route change " + repr(state))
     self.workList.put(state)
   
   def run(self):
@@ -59,7 +60,7 @@ class Router (threading.Thread):
     keep_drivers = {}
     inactive_drivers = []
 
-    print "DBG: Processing route change " + repr(order)
+    logger.debug("Processing route change " + repr(order))
     
     drivers = {}
     for z in order:
@@ -81,9 +82,9 @@ class Router (threading.Thread):
     self.updateDrivers(keep_drivers)
     self.disableDrivers(inactive_drivers)
     
-    print "DBG: Router->On  = " + repr(new_drivers)
-    print "DBG: Router->Upd = " + repr(keep_drivers)
-    print "DBG: Router->Off = " + repr(inactive_drivers)
+    logger.debug("Router->On  = " + repr(new_drivers))
+    logger.debug("Router->Upd = " + repr(keep_drivers))
+    logger.debug("Router->Off = " + repr(inactive_drivers))
 
     """ Store what drivers that are in-use """
     self.prevState = keep_drivers
@@ -92,9 +93,9 @@ class Router (threading.Thread):
     """ Finally, execute any scene specific extras """
     for z in order:
       if "extras" in order[z]:
-        print "DBG: " + z + " has extras"
+        logger.debug(z + " has extras")
         for e in order[z]["extras"]:
-          print "DBG: " + e + " has params " + order[z]["extras"][e]
+          logger.debug(e + " has params " + order[z]["extras"][e])
           self.CONFIG.getDriver(e).applyExtras(order[z]["extras"][e])
 
   def enableDrivers(self, drivers):
@@ -106,14 +107,20 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      print "DBG: Enabling %s" % driver
-      if zone is None:
-        driver.setPower(True)
-      else:
-        driver.setPower(zone, True)
-      for cmd in drivers[d]:
-        driver.handleCommand(zone, cmd, None)
-  
+      logger.debug("Enabling %s" % driver)
+      try:
+        if zone is None:
+          driver.setPower(True)
+        else:
+          driver.setPower(zone, True)
+      except:
+        logger.error("Driver %s failed to power on" % driver)
+      try:
+        for cmd in drivers[d]:
+          driver.handleCommand(zone, cmd, None)
+      except:   
+        logger.error("Driver %s failed during initial command setup" % driver)
+
   def disableDrivers(self, drivers):
     """Powers off drivers"""
     if drivers is None or len(drivers) == 0:
@@ -123,11 +130,14 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      print "DBG: Disabling %s" % driver
-      if zone is None:
-        driver.setPower(False)
-      else:
-        driver.setPower(zone, False)
+      logger.debug("Disabling %s" % driver)
+      try:
+        if zone is None:
+          driver.setPower(False)
+        else:
+          driver.setPower(zone, False)
+      except:
+        logger.error("Driver %s failed to power off" % driver)
     
   def updateDrivers(self, drivers):
     """Sends new list of commands to drivers"""
@@ -138,9 +148,12 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      print "DBG: Updating %s" % driver
-      for cmd in drivers[d]:
-        driver.handleCommand(zone, cmd, None)
+      logger.debug("Updating %s" % driver)
+      try:
+        for cmd in drivers[d]:
+          driver.handleCommand(zone, cmd, None)
+      except:
+        logger.error("Driver %s failed to update state" % driver)
 
   def splitDriverZone(self, driver):
     """Splits drivers with zoning support into two parts"""

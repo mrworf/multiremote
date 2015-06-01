@@ -23,6 +23,7 @@ since it provides quite a bit of abstraction and easier power management.
 """
 from commandtype import CommandType
 import traceback
+import logging
 
 class DriverNull:
   def __init__(self):
@@ -43,19 +44,18 @@ class DriverNull:
       else:
         self.eventOff()
     except:
-      print "ERR: Exception when calling setPower(%s)" % repr(enable)
-      print traceback.format_exc()
+      logging.exception("Exception when calling setPower(%s)" % repr(enable))
     return True
 
   def eventOn(self):
     """ Override to handle power on event
     """
-    print "WARN: " + repr(self) + " is not implementing power on"
+    logging.warning("" + repr(self) + " is not implementing power on")
 
   def eventOff(self):
     """ Override to handle power off event
     """
-    print "WARN: " + repr(self) + " is not implementing power off"
+    logging.warning("" + repr(self) + " is not implementing power off")
 
   def applyExtras(self, keyvaluepairs):
     """ Called when this device is selected as a scene, can be called more
@@ -99,12 +99,11 @@ class DriverNull:
     """
     result = None
     if command not in self.COMMAND_HANDLER:
-      print "ERR: %s is not a supported command" % command
+      logging.error("%s is not a supported command" % command)
       return result
     
     try:
       item = self.COMMAND_HANDLER[command]
-      print repr(item)
       if item["arguments"] == 0:
         if "extras" in item:
           result = item["handler"](zone, item["extras"])
@@ -117,8 +116,7 @@ class DriverNull:
           result = item["handler"](zone, args[0])
       return result
     except:
-      print "ERR: Exception executing command %s for zone %s" % (repr(command), repr(zone))
-      print traceback.format_exc()
+      logging.exception("Exception executing command %s for zone %s" % (repr(command), repr(zone)))
       return None
 
   def getCommands(self):

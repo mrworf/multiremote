@@ -22,6 +22,7 @@ import requests
 import base64
 import json
 from commandtype import CommandType
+import logging
 
 class DriverBasicIR(DriverNull):
   def __init__(self, server, commandfile):
@@ -35,7 +36,7 @@ class DriverBasicIR(DriverNull):
     jdata = open(commandfile)
     self.ircmds = json.load(jdata)
     if not "on" in self.ircmds:
-      print "INFO: Using toggle for %s instead of discreet on/off" % commandfile
+      logging.debug("Using toggle for %s instead of discreet on/off" % commandfile)
       code_on = code_off = "toggle"
 
     """
@@ -54,11 +55,11 @@ class DriverBasicIR(DriverNull):
       }
 
   def eventOn(self):
-    print "DBG: eventOff() for %s" % self.file
+    logging.debug("eventOff() for %s" % self.file)
     self.sendIr(self.code_on)
 
   def eventOff(self):
-    print "DBG: eventOn() for %s" % self.file
+    logging.debug("eventOn() for %s" % self.file)
     self.sendIr(self.code_off)
 
   def sendCommand(self, zone, command):
@@ -66,14 +67,14 @@ class DriverBasicIR(DriverNull):
 
   def sendIr(self, command):
     if not command in self.ircmds:
-      print "WARN: %s is not a defined IR command" % command
+      logging.warning("%s is not a defined IR command" % command)
 
     ir = self.ircmds[command]
 
     url = self.server + "/write/" + ir
     r = requests.get(url)
     if r.status_code != 200:
-      print "ERROR: Driver was unable to execute %s" % url
+      logging.error("Driver was unable to execute %s" % url)
       return False
 
     j = r.json()

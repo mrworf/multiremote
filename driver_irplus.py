@@ -61,6 +61,7 @@ import base64
 import json
 import time
 from commandtype import CommandType
+import logging
 
 class DriverIRPlus(DriverNull):
   def __init__(self, server, commandfile):
@@ -122,14 +123,14 @@ class DriverIRPlus(DriverNull):
 
   def sendIr(self, command):
     if not command in self.ircmds:
-      print "WARN: %s is not a defined IR command" % command
+      logging.warning("%s is not a defined IR command" % command)
 
     ir = self.ircmds[command]
 
     url = self.server + "/write/" + ir
     r = requests.get(url)
     if r.status_code != 200:
-      print "ERROR: Driver was unable to execute %s" % url
+      logging.error("Driver was unable to execute %s" % url)
       return False
 
     j = r.json()

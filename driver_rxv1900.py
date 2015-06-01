@@ -18,6 +18,7 @@ Implementation of RX-V1900 commands
 """
 import requests
 from commandtype import CommandType
+import logging
 
 class DriverRXV1900:
   cfg_YamahaController = None
@@ -201,7 +202,7 @@ class DriverRXV1900:
     elif i == 7:
       self.power = [False, False, True]
       
-    print "INFO: Powerstate has changed to " + str(self.power)
+    logging.info("Powerstate has changed to " + str(self.power))
     return
     
   def handleVolume(self, cmd, data):
@@ -212,11 +213,11 @@ class DriverRXV1900:
     elif cmd == "A2": # Zone 3
       z = 2
     else:
-      print "WARN: Unknown command " + cmd
+      logging.warning("Unknown command " + cmd)
       return
     
     self.volume[z] = int(data, 16)
-    print "INFO: Volume has changed for Zone " + str(z+1) + " to " + data
+    logging.info("Volume has changed for Zone " + str(z+1) + " to " + data)
     return
     
   def handleInput(self, cmd, data):
@@ -228,16 +229,16 @@ class DriverRXV1900:
     elif cmd == "A0":
       z = 2
     else:
-      print "WARN: Unknown command " + cmd
+      logging.warning("Unknown command " + cmd)
       return
     # now, lets translate the actual input that happened
     self.input[z] = self.MAP_INPUT[z][int(data, 16)]
-    print "INFO: Input for zone " + str(z+1) + " is " + str(self.input[z])
+    logging.info("Input for zone " + str(z+1) + " is " + str(self.input[z]))
     
   
   def issueOperation(self, zone, cmd):
     function = self.OPERATION_TABLE["zone" + str(zone)][cmd]
-    print "zone" + str(zone) + ": " + cmd + " = " + repr(function)
+    logging.debug("zone" + str(zone) + ": " + cmd + " = " + repr(function))
 
     url = self.cfg_YamahaController + "/operation/" + function[0]
     if function[1] != None:
@@ -245,14 +246,13 @@ class DriverRXV1900:
 
     r = requests.get(url)
     if r.status_code != 200:
-      print "ERROR: Remote was unable to execute command %s" % cmd
+      logging.error("Remote was unable to execute command %s" % cmd)
       return False
 
     j = r.json()
-    #print repr(j);
     
     if j["status"] != 200:
-      print "ERROR: Remote received command but failed to execute"
+      logging.error("Remote received command but failed to execute")
       return False
     
     if function[1] != None:
@@ -268,20 +268,20 @@ class DriverRXV1900:
     if len(param) < 2:
       param = "0" + param
     
-    print "Zone " + str(zone) + ": " + repr(command) + " = " + repr(function)
+    logging.debug("Zone " + str(zone) + ": " + repr(command) + " = " + repr(function))
     url = self.cfg_YamahaController + "/system/" + function[0] + param
     if function[1] != None:
       url += "/" + function[1]
 
     r = requests.get(url)
     if r.status_code != 200:
-      print "ERROR: Remote was unable to execute command"
+      logging.error("Remote was unable to execute command")
       return False
 
     j = r.json()
     
     if j["status"] != 200:
-      print "ERROR: Remote received command but failed to execute"
+      logging.error("Remote received command but failed to execute")
       return False
 
     if function[1] != None:    
@@ -292,9 +292,9 @@ class DriverRXV1900:
   def interpretResult(self, result):
     # Dig deeper in the result
     if not result["valid"]:
-      print "WARN: Result isn't valid: " + result
+      logging.warning("Result isn't valid: " + result)
     elif not result["command"] in self.RESPONSE_HANDLER:
-      print "WARN: No handler defined for " + str(result)
+      logging.warning("No handler defined for " + str(result))
     else:    
       self.RESPONSE_HANDLER[result["command"]](result["command"], result["data"])
     return
@@ -410,7 +410,7 @@ class DriverRXV1900:
   def handleCommand(self, zone, command, *args):
     result = None
     if not command in self.COMMAND_HANDLER:
-      print "ERR: %s is not a command" % command
+      logging.error("%s is not a command" % command)
       return result
     zone = int(zone)
     item = self.COMMAND_HANDLER[command]
@@ -432,11 +432,11 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
       
     if self.power[zone-1] == power:
-      print "Zone " + str(zone) + " already set to desired power state (" + str(power) + ")"
+      logging.warn("Zone " + str(zone) + " already set to desired power state (" + str(power) + ")")
       return True
       
     if power:
@@ -449,7 +449,7 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
       
     return self.power[zone-1]
@@ -457,7 +457,7 @@ class DriverRXV1900:
   def setMute(self, zone, mute):
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
 
     if mute:
@@ -471,7 +471,7 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
 
     return self.mute[zone-1]
@@ -483,7 +483,7 @@ class DriverRXV1900:
     """
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return 0
 
     volume = int(volume)
@@ -498,7 +498,7 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return 0
     return self.issueOperation(zone, "vol-up")
 
@@ -506,7 +506,7 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return 0
     return self.issueOperation(zone, "vol-down")
 
@@ -514,7 +514,7 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return 0
 
     return self.volume[zone-1]    
@@ -523,12 +523,12 @@ class DriverRXV1900:
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
     
     # Figure out if this is a valid input for the zone
     if not input in self.OPERATION_TABLE["zone" + str(zone)]:
-      print "ERROR: " + input + " not supported by zone " + str(zone)
+      logging.error("" + input + " not supported by zone " + str(zone))
       return False
     
     # Alright, let's do it!
@@ -537,7 +537,7 @@ class DriverRXV1900:
   def getInput(self, zone):
     zone = int(zone)
     if zone < 1 or zone > 3:
-      print "ERROR: Zone " + str(zone) + " not supported by driver"
+      logging.error("Zone " + str(zone) + " not supported by driver")
       return False
 
     return self.input[zone-1]    

@@ -35,6 +35,7 @@ from driver_null import DriverNull
 import requests
 from xml.etree import ElementTree
 from commandtype import CommandType
+import logging
 
 class DriverRoku(DriverNull):
   def __init__(self, server):
@@ -62,7 +63,7 @@ class DriverRoku(DriverNull):
     if self.home == None:
       self.getApps()
     if self.home == None:
-      print "WARN: Roku did not report a home screen id"
+      logging.warning("Roku did not report a home screen id")
       return
     self.startApp(self.home)
 
@@ -79,7 +80,7 @@ class DriverRoku(DriverNull):
     if "app" in extras:
       k = extras["app"].lower()
       for key in self.apps:
-        print "DBG: Testing \"%s\" for \"%s\", returning %d" % (key.lower(), k.lower(), key.lower().find(k))
+        logging.debug("Testing \"%s\" for \"%s\", returning %d" % (key.lower(), k.lower(), key.lower().find(k)))
         if key.lower().find(k) > -1:
           self.startApp(self.apps[key])
           break
@@ -91,12 +92,12 @@ class DriverRoku(DriverNull):
           break
 
   def getApps(self):
-    print "DBG: getApps() called"
+    logging.debug("getApps() called")
     result = {}
     r = requests.get(self.server + "query/apps")
     tree = ElementTree.fromstring(r.content)
     if tree.tag != "apps":
-      print "ERR: Roku didn't respond with apps list"
+      logging.error("Roku didn't respond with apps list")
       return {}
     for branch in tree:
       if branch.tag == "app" and branch.attrib["type"] == "menu":
@@ -106,17 +107,16 @@ class DriverRoku(DriverNull):
       if branch.tag != "app" or branch.attrib["type"] != "appl":
         continue
       result[branch.text] = int(branch.attrib["id"])
-    print "DBG: getApps() = " + repr(result)
+    logging.debug("getApps() = " + repr(result))
     return result
 
   def startApp(self, appid):
-    print "DBG: Starting %slaunch/%d" % (self.server, appid)
+    logging.debug("Starting %slaunch/%d" % (self.server, appid))
     requests.post("%slaunch/%d" % (self.server, appid))
 
   def navUp(self, zone):
-    print "DBG: Roku navUp: " + self.server + "keypress/Up"
+    logging.debug("Roku navUp: " + self.server + "keypress/Up")
     r = requests.post(self.server + "keypress/Up")
-    print repr(r)
 
   def navDown(self, zone):
     requests.post(self.server + "keypress/Down")

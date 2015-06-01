@@ -23,6 +23,7 @@ Also able to reply back regarding state of various parts of the system
 """
 from commandtype import CommandType
 from setup import RemoteSetup
+import logging
 
 class Config:
   DRIVER_TABLE = None
@@ -30,8 +31,9 @@ class Config:
   SCENE_TABLE = None
   ZONE_TABLE = None
   REMOTE_TABLE = None
-  
+
   def __init__(self):
+
     """
     At this point, initialize some extra parameters, such as the combined
     capabilties of zones which have sub-zones.
@@ -57,7 +59,7 @@ class Config:
         self.ZONE_TABLE[z]["video"] = None
         for s in self.ZONE_TABLE[z]["subzones"]:
           if not "subzone-default" in self.ZONE_TABLE[z]: # Set a default
-            print "WARN: No default subzone defined for %s, setting it to %s" % (z, s)
+            logging.warn("No default subzone defined for %s, setting it to %s" % (z, s))
             self.ZONE_TABLE[z]["subzone-default"] = s
 
           if not self.ZONE_TABLE[z]["subzones"][s]["audio"] is None and self.ZONE_TABLE[z]["audio"] is None:
@@ -73,7 +75,7 @@ class Config:
 
   def getSceneListForZone(self, zone):
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return []
     return self.getSceneList(self.hasZoneAudio(zone), self.hasZoneVideo(zone))
 
@@ -96,7 +98,7 @@ class Config:
   def getScene(self, name):
     """Obtains the details of a specific scene"""
     if not self.hasScene(name):
-      print "ERR: %s is not a scene" % name
+      logging.error("%s is not a scene" % name)
       return None
     return self.SCENE_TABLE[name]
 
@@ -106,7 +108,7 @@ class Config:
     
   def getSceneZoneUsage(self, name):
     if not self.hasScene(name):
-      print "ERR: %s is not a scene"
+      logging.error("%s is not a scene")
       return []
       
     result = []
@@ -117,7 +119,7 @@ class Config:
   
   def getSceneRemoteUsage(self, name):
     if not self.hasScene(name):
-      print "ERR: %s is not a scene"
+      logging.error("%s is not a scene")
       return []
       
     result = []
@@ -138,37 +140,37 @@ class Config:
   def getZone(self, name):
     """Return the settings for a zone"""
     if not self.hasZone(name):
-      print "ERR: %s is not a zone" % name
+      logging.error("%s is not a zone" % name)
       return None
     return self.ZONE_TABLE[name]
 
   def hasSubZones(self, zone):
     """Tests if the zone has subzones"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     return "subzones" in self.ZONE_TABLE[zone]
 
   def hasSubZone(self, zone, sub):
     """Tests if a zone has a specific subzone"""
     if not self.hasSubZones(zone):
-      print "ERR: %s does not have subzones" % zone
+      logging.error("%s does not have subzones" % zone)
       return False
     return sub in self.ZONE_TABLE[zone]["subzones"]
 
   def setZoneScene(self, zone, scene):
     """Set the scene for a zone"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     elif not self.hasScene(scene):
-      print "ERR: %s is not a scene" % scene
+      logging.error("%s is not a scene" % scene)
       return False
     
     if self.SCENE_TABLE[scene]["audio"] and self.ZONE_TABLE[zone]["audio"] == None:
-      print "WARN: Zone %s does not support audio which is provided by the scene %s" % (zone, scene)
+      logging.warning("Zone %s does not support audio which is provided by the scene %s" % (zone, scene))
     if self.SCENE_TABLE[scene]["video"] and self.ZONE_TABLE[zone]["video"] == None:
-      print "WARN: Zone %s does not support video which is provided by the scene %s" % (zone, scene)
+      logging.warning("Zone %s does not support video which is provided by the scene %s" % (zone, scene))
     self.ZONE_TABLE[zone]["active-scene"] = scene
     
     # Handle subzones...
@@ -181,14 +183,14 @@ class Config:
   def getZoneScene(self, zone):
     """Get the current scene for a zone"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return None
     return self.ZONE_TABLE[zone]["active-scene"]
   
   def clearZoneScene(self, zone):
     """Removes the scene for a zone"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     self.ZONE_TABLE[zone]["active-scene"] = None
     return True
@@ -196,14 +198,14 @@ class Config:
   def getSubZone(self, zone):
     """Get active subzone for a zone"""
     if not self.hasSubZones(zone):
-      print "ERR: %s does not have subzones" % zone
+      logging.error("%s does not have subzones" % zone)
       return None
     return self.ZONE_TABLE[zone]["active-subzone"]
 
   def setSubZone(self, zone, sub):
     """Set the subzone for a zone"""
     if not self.hasSubZone(zone, sub):
-      print "ERR: %s does not have sub zone %s" % (zone, sub)
+      logging.error("%s does not have sub zone %s" % (zone, sub))
       return False
     self.ZONE_TABLE[zone]["active-subzone"] = sub
     return True
@@ -211,7 +213,7 @@ class Config:
   def clearSubZone(self, zone):
     """This one is special, it will switch to default subzone"""
     if not self.hasSubZones(zone):
-      print "ERR: %s does not have subzones" % zone
+      logging.error("%s does not have subzones" % zone)
       return False
     self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
     return True
@@ -219,10 +221,10 @@ class Config:
   def getSubZoneList(self, zone):
     """Get all subzones"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return {}
     if not self.hasSubZones(zone):
-      print "ERR: %s does not have subzones" % zone
+      logging.error("%s does not have subzones" % zone)
       return {}
 
     result = {}
@@ -233,14 +235,14 @@ class Config:
   def hasZoneAudio(self, zone):
     """Tests if a zone has audio capabilities"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     return self.ZONE_TABLE[zone]["audio"] != None
 
   def hasZoneVideo(self, zone):
     """Tests if a zone has video capabilities"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     return self.ZONE_TABLE[zone]["video"] != None
 
@@ -251,17 +253,17 @@ class Config:
   def getRemote(self, name):
     """Get remote"""
     if not self.hasRemote(name):
-      print "ERR: %s is not a remote" % name
+      logging.error("%s is not a remote" % name)
       return None
     return self.REMOTE_TABLE[name]
   
   def setRemoteZone(self, remote, zone):
     """Set the zone which should be controlled by the remote"""
     if not self.hasRemote(remote):
-      print "ERR: %s is not a remote" % remote
+      logging.error("%s is not a remote" % remote)
       return False
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return False
     self.REMOTE_TABLE[remote]["active-zone"] = zone
     return True
@@ -269,7 +271,7 @@ class Config:
   def getRemoteZone(self, name):
     """Get the zone which the remote is controlling"""
     if not self.hasRemote(name):
-      print "ERR: %s is not a remote" % name
+      logging.error("%s is not a remote" % name)
       return None
     return self.REMOTE_TABLE[name]["active-zone"]
 
@@ -283,7 +285,7 @@ class Config:
   def getZoneRemoteList(self, zone):
     """Gets a list of remotes currently controlling the zone"""
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return []
     
     result = []
@@ -294,7 +296,7 @@ class Config:
   
   def clearRemoteZone(self, remote):
     if not self.hasRemote(remote):
-      print "ERR: %s is not a remote" % remote
+      logging.error("%s is not a remote" % remote)
       return False
     self.REMOTE_TABLE[remote]["active-zone"] = None
     return True  
@@ -320,11 +322,11 @@ class Config:
     
   def getSceneCommands(self, scene):
     if not self.hasScene(scene):
-      print "ERR: %s is not a scene" % scene
+      logging.error("%s is not a scene" % scene)
       return {}
     drv = self.getDriver(self.SCENE_TABLE[scene]["driver"])
     if drv is None:
-      print "ERR: Cannot find driver for scene %s" % scene
+      logging.error("Cannot find driver for scene %s" % scene)
       return {}
     result = drv.getCommands()
 
@@ -356,17 +358,17 @@ class Config:
     """
     result = {"zone" : {}, "scene" : {}}
     if not self.hasRemote(remote):
-      print "ERR: %s is not a remote" % remote
+      logging.error("%s is not a remote" % remote)
       return result
     
     if self.getRemoteZone(remote) == None:
-      print "WARN: Remote %s isn't attached to a zone" % remote
+      logging.warning("Remote %s isn't attached to a zone" % remote)
       return result
     
     zname = self.getRemoteZone(remote)
     sname = self.getZoneScene(zname)
     if sname is None:
-      print "WARN: Zone %s is not assigned a scene" % zname
+      logging.warn("Zone %s is not assigned a scene" % zname)
       #return []
     
     result["zone"] = self.getZoneCommands(zname)
@@ -376,7 +378,7 @@ class Config:
 
   def execZoneCommand(self, remote, command, extras):
     if not self.hasRemote(remote):
-      print "ERR: %s is not a remote" % remote
+      logging.error("%s is not a remote" % remote)
       return False
     zone = self.getRemoteZone(remote)
     scene = self.getZoneScene(zone)
@@ -402,9 +404,9 @@ class Config:
     return False
 
   def execSceneCommand(self, remote, command, extras):
-    print "DBG: execSceneCommand called"
+    logging.debug("execSceneCommand called")
     if not self.hasRemote(remote):
-      print "ERR: %s is not a remote" % remote
+      logging.error("%s is not a remote" % remote)
       return False
     zone = self.getRemoteZone(remote)
     scene = self.getZoneScene(zone)
@@ -416,7 +418,7 @@ class Config:
     if command in drv.getCommands():
       return drv.handleCommand(None, command, extras)
     else:
-      print "WARN: %s is not a command" % command
+      logging.warning("%s is not a command" % command)
         
     return False
 
@@ -427,10 +429,10 @@ class Config:
     then this function replaces that with None
     """
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return (None, None)
     if self.ZONE_TABLE[zone]["active-scene"] is None:
-      print "ERR: No scene for zone %s" % zone
+      logging.error("No scene for zone %s" % zone)
       return (None, None)
     if self.hasSubZones(zone):
       sz = self.ZONE_TABLE[zone]["active-subzone"]
@@ -484,10 +486,10 @@ class Config:
     provided scene will be used instead.
     """
     if not self.hasZone(zone):
-      print "ERR: %s is not a zone" % zone
+      logging.error("%s is not a zone" % zone)
       return None
     if not sceneOverride is None and not self.hasScene(sceneOverride):
-      print "ERR: %s is not a scene" % sceneOverride
+      logging.error("%s is not a scene" % sceneOverride)
       return None
     if self.ZONE_TABLE[zone]["active-scene"] is None and sceneOverride is None:
       return None
@@ -528,9 +530,9 @@ class Config:
     elif self.SCENE_TABLE[s]["audio"] and self.SCENE_TABLE[s]["video"]:
       route = self.resolveRoute(sdrv, adrv, vdrv)
     elif not self.SCENE_TABLE[s]["audio"] and self.SCENE_TABLE[s]["video"]:
-      print "ERR: Video only zones are not supported"
+      logging.error("Video only zones are not supported")
     else:
-      print "ERR: Scene has neither audio nor video!"
+      logging.error("Scene has neither audio nor video!")
 
     return self.translateRoute(zone, route)
 
@@ -540,7 +542,7 @@ class Config:
     optionally video driver.
     """
     if sdrv not in self.ROUTING_TABLE:
-      print "ERR: %s does not have any routing information" % sdrv
+      logging.error("%s does not have any routing information" % sdrv)
       return []
     
     if vdrv == None or not "audio+video" in self.ROUTING_TABLE[sdrv]:
@@ -553,7 +555,7 @@ class Config:
       routes = self.filterRoutes(routes, vdrv)
 
     if len(routes) != 1:
-      print "WARN: Routing was inconclusive, got %d routes" % len(routes)
+      logging.warning("Routing was inconclusive, got %d routes" % len(routes))
       
     route = routes[0]
     if not sdrv in route:
@@ -657,10 +659,10 @@ class Config:
     # Find any overlap of drivers
     result = []
     for z in active:
-      print "Checking zone " + z
+      logger.debug("Checking zone " + z)
       for d in active[z]["route"]:
         if d in route:
-          print "Overlap detected, %s is already in use"
+          logger.warning("Overlap detected, %s is already in use")
           result.append(z)
           break
     
@@ -674,6 +676,6 @@ class Config:
       
     (driver, ignore) = self.translateDriver(driver)
     if not driver in self.DRIVER_TABLE:
-      print "ERR: %s is not a driver" % driver
+      logging.error("%s is not a driver" % driver)
       return None
     return self.DRIVER_TABLE[driver]

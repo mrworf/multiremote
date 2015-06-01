@@ -30,6 +30,7 @@ from flask import Flask, jsonify
 import threading
 import Queue
 import time
+import logging
 
 from router import Router
 from config import Config
@@ -43,11 +44,18 @@ except ImportError:
   os.sys.path.insert(0, parentdir)
   from flask.ext.cors import CORS
 
+""" Setup logging """
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s')
+
+""" Disable some logging by-default """
+logging.getLogger("Flask-Cors").setLevel(logging.ERROR)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+"""cfg items should be loaded by commandline"""
 cfg_ServerAddr = "0.0.0.0"
 
 app = Flask(__name__)
 cors = CORS(app) # Needed to make us CORS compatible
-
 
 config = Config()
 router = Router(config)
@@ -293,5 +301,5 @@ def api_test():
 
 if __name__ == "__main__":
   app.debug = False
+  logging.info("multiRemote running")
   app.run(host=cfg_ServerAddr)
-
