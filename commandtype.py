@@ -1,3 +1,18 @@
+# This file is part of multiRemote.
+# 
+# multiRemote is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# multiRemote is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
+# 
 """ CommandType class contains all the various types of commands,
     depending on the type and flag(s), there may be different
     behaviors exposed in the various drivers and/or server.
@@ -15,6 +30,12 @@ class CommandType:
                       # call1, call1, call1, call2, call1 -> call1, call2, call1
   FLAG_RESULT     = 4 # This command will return a result
 
+  """ Categories describing scenes in "one word"
+  """
+  CATEGORY_UNDEF  = 0
+  CATEGORY_MUSIC  = 1
+  CATEGORY_VIDEO  = 2
+  CATEGORY_GAME   = 3
 
   """ Definition of commands 
   """

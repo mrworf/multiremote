@@ -1,4 +1,20 @@
 #!/usr/bin/env python
+#
+# This file is part of multiRemote.
+# 
+# multiRemote is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# multiRemote is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
+# 
 """
 REST based remote control
 It's able to handle multiple remotes controlling the same list of equipment.
@@ -63,6 +79,7 @@ def api_scene(scene):
         "scene"       : scene,
         "name"        : config.getScene(scene)["name"],
         "description" : config.getScene(scene)["description"],
+        "ux-hint"     : config.getScene(scene)["ux-hint"],
         "zones"       : config.getSceneZoneUsage(scene),
         "remotes"     : config.getSceneRemoteUsage(scene)
       }
@@ -92,7 +109,8 @@ def api_zone(zone):
         "zone"        : zone,
         "name"        : config.getZone(zone)["name"],
         "scene"       : config.getZoneScene(zone),
-        "remotes"     : config.getZoneRemoteList(zone)
+        "remotes"     : config.getZoneRemoteList(zone),
+        "ux-hint"     : config.getZone(zone)["ux-hint"],
       }
       if config.hasSubZones(zone):
         ret[zone]["subzones"] = config.getSubZoneList(zone)
@@ -274,6 +292,6 @@ def api_test():
   return ret
 
 if __name__ == "__main__":
-  app.debug = True
+  app.debug = False
   app.run(host=cfg_ServerAddr)
 

@@ -1,3 +1,20 @@
+/**
+ * This file is part of multiRemote.
+ * 
+ * multiRemote is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * multiRemote is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
+ *  
+ */
 var zoneList = [];
 var activeZone = null;
 
@@ -330,6 +347,65 @@ function populateCommands(data) {
   }
 }
 
+/**
+ * Creates an object which allows easy repeat handling
+ *
+ * @param initialDelay Number of milliseconds before repeating
+ * @param repeatDelay Once repeating, this is the interval (in ms)
+ */
+ButtonRepeater = function(initialDelay, repeatDelay) {
+  this.repeatTimer = {};
+  this.initialDelay = initialDelay;
+  this.repeatDelay = repeatDelay;
+
+  /**
+   * Starts the repeat logic for an element
+   *
+   * @param btn The DOM id of the element that's being repeated
+   * @param func The code to execute upon press/repeat
+   */
+  this.start = function(btn, func) {
+    var copy = this;
+    this.stop(btn);
+    func();
+    this.repeatTimer[btn] = {"timer" : setTimeout( function() {copy.issueRepeat(btn);}, copy.initialDelay), "func" : func};
+  }
+
+  /**
+   * Stops the repeat logic for an element
+   *
+   * @param btn The DOM id of the element that's being repeated
+   */
+  this.stop = function(btn) {
+    if (btn in this.repeatTimer) {
+      clearTimeout(this.repeatTimer[btn]);
+      delete this.repeatTimer[btn];
+    }
+  }
+
+  this.issueRepeat = function(btn) {
+    if (btn in this.repeatTimer) {
+      var copy = this;
+      this.repeatTimer[btn].func();
+      this.repeatTimer[btn].timer = setTimeout( function() {copy.issueRepeat(btn);}, copy.repeatDelay);
+    }
+  }
+
+  /**
+   * Simplifies the use of this class, just provide a DOM ID and
+   * it will be repeating.
+   *
+   * @param btn The DOM ID of the element to wrap
+   * @param func The code to execute when clicked and repeated
+   */
+  this.wrap = function(btn, func) {
+    var copy = this;
+    $("#" + btn).mouseup( function() {copy.stop(btn); });
+    $("#" + btn).mouseout( function() {copy.stop(btn); });
+    $("#" + btn).mousedown( function() {copy.start(btn, func); });
+  }
+}
+
 $( function() {
   cfg_name = $.jStorage.get("cfg-name");
   cfg_id = $.jStorage.get("cfg-id");
@@ -345,4 +421,8 @@ $( function() {
 
   // prep our dialog
   populateZones();
+
+  repeat = new ButtonRepeater(1000, 500);
+  repeat.wrap("volup", remoteVolumeUp);
+  repeat.wrap("voldown", remoteVolumeDown);
 })

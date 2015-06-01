@@ -1,3 +1,18 @@
+# This file is part of multiRemote.
+# 
+# multiRemote is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# multiRemote is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
+# 
 """
 This class describes your specific setup, it's automatically loaded into the
 config.py class which uses this data as it sees fit.
@@ -173,7 +188,7 @@ class RemoteSetup:
       "description" : "Allows you to listen to music (Swedish Spotify)",
       "audio"       : True,
       "video"       : False,
-      "ux-hint"     : "android-app=com.spotify.music,category=music",
+      "ux-hint"     : "android-app=com.spotify.music,category=music,icon=spotify",
     },
 
     "dvd" : {
@@ -182,7 +197,7 @@ class RemoteSetup:
       "description" : "Region free DVD player",
       "audio"       : True,
       "video"       : True,
-      "ux-hint"     : "category=video",
+      "ux-hint"     : "category=video,icon=dvd",
     },
   
     "plex" : {
@@ -191,7 +206,7 @@ class RemoteSetup:
       "description" : "Watch movies and TV series",
       "audio"       : True,
       "video"       : True,
-      "ux-hint"     : "category=video",
+      "ux-hint"     : "category=video,icon=plex",
     },
     
     "netflix" : {
@@ -201,7 +216,7 @@ class RemoteSetup:
       "description"   : "Watch movies and TV series",
       "audio"         : True,
       "video"         : True,
-      "ux-hint"     : "category=video",
+      "ux-hint"       : "category=video,icon=netflix",
     },
   
     "amazon" : {
@@ -211,7 +226,7 @@ class RemoteSetup:
       "description"   : "Watch movies and TV series",
       "audio"         : True,
       "video"         : True,
-      "ux-hint"     : "category=video",
+      "ux-hint"       : "category=video,icon=amazon",
     },
   
     "ps4" : {
@@ -220,7 +235,7 @@ class RemoteSetup:
       "description" : "Play games",
       "audio"       : True,
       "video"       : True,
-      "ux-hint"     : "category=gaming",
+      "ux-hint"     : "category=gaming,icon=ps4",
     },
   }
   
@@ -271,23 +286,28 @@ class RemoteSetup:
           "name" : "TV",
           "audio" : "receiver:1",
           "video" : "tv",
+          "ux-hint" : "",
         },
         "projector" :  {
           "name" : "Cinema",
           "audio" : "receiver:1",
           "video" : "projector",
+          "ux-hint" : "",
         }
-      }
+      },
+      "ux-hint" : "",
     },
     "zone2" : {
       "name"  : "Kitchen",
       "audio" : "receiver:2",
       "video" : None,
+      "ux-hint" : "",
     },
     "zone3" : {
       "name"  : "Patio",
       "audio" : "receiver:3",
       "video" : None,
+      "ux-hint" : "",
     }
   }
   
