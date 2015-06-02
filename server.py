@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 #
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """
 REST based remote control
 It's able to handle multiple remotes controlling the same list of equipment.
@@ -72,14 +72,14 @@ def api_root():
   msg = {"status": "ok"}
   result = jsonify(msg)
   result.status_code = 200
-    
+
   return result
 
 @app.route("/scene", defaults={"scene" : None})
 @app.route("/scene/<scene>")
 def api_scene(scene):
   ret = {}
-   
+
   if scene is None:
     scenes = config.getSceneList(None)
   elif not config.hasScene(scene):
@@ -96,11 +96,11 @@ def api_scene(scene):
         "description" : config.getScene(scene)["description"],
         "ux-hint"     : config.getScene(scene)["ux-hint"],
         "zones"       : config.getSceneZoneUsage(scene),
-        "remotes"     : config.getSceneRemoteUsage(scene)
+        "remotes"     : config.getSceneRemoteUsage(scene),
       }
     if len(scenes) == 1:
       ret = ret[scenes[0]]
-      
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
@@ -109,7 +109,7 @@ def api_scene(scene):
 @app.route("/zone/<zone>")
 def api_zone(zone):
   ret = {}
-  
+
   if zone is None:
     zones = config.getZoneList();
   elif not config.hasZone(zone):
@@ -126,6 +126,7 @@ def api_zone(zone):
         "scene"       : config.getZoneScene(zone),
         "remotes"     : config.getZoneRemoteList(zone),
         "ux-hint"     : config.getZone(zone)["ux-hint"],
+        "compatible"  : config.getSceneListForZone(zone),
       }
       if config.hasSubZones(zone):
         ret[zone]["subzones"] = config.getSubZoneList(zone)
@@ -171,7 +172,7 @@ def api_assign(zone, scene, options):
     unassign = Other zones will be unassigned
   """
   ret = {}
-  
+
   if zone == None:
     ret["zones"] = config.getZoneList()
   else:
@@ -193,7 +194,7 @@ def api_assign(zone, scene, options):
         elif options == "clone":
           for z in conflict:
             config.setZoneScene(z, scene)
-          config.setZoneScene(zone, scene)            
+          config.setZoneScene(zone, scene)
           router.updateRoutes()
     ret["active"] = config.getZoneScene(zone)
     ret["zone"] = zone
@@ -208,15 +209,15 @@ def api_assign(zone, scene, options):
 def api_unassign(zone):
   ret = {
   }
-  
+
   if zone == None:
     ret["zones"] = config.getZoneList()
   else:
     config.clearZoneScene(zone)
-  
+
   ret = jsonify(ret)
   ret.status_code = 200
-  
+
   router.updateRoutes()
   return ret
 
@@ -226,7 +227,7 @@ def api_unassign(zone):
 @app.route("/attach/<remote>/<zone>/<options>")
 def api_attach(remote, zone, options):
   ret = {}
-  
+
   if remote is None:
     ret["remotes"] = config.getRemoteList()
   else:
@@ -263,17 +264,17 @@ def api_command(remote, category, command, arguments):
   """
   /command/<remote>
   Lists available commands for remote, if remote is not attached, this will
-  return an error. 
-  
+  return an error.
+
   /command/<remote>/<category>/<command>
   Executes said command without any arguments
-  
+
   /command/<remote>/<category>/<command>/<arguments>
   Executes said command supplied argument
   """
   ret = {}
   lst = config.getRemoteCommands(remote)
-  
+
   if category == None:
     ret["zone"] = config.getRemoteZone(remote)
     ret["commands"] = lst
@@ -301,7 +302,7 @@ def api_command(remote, category, command, arguments):
 @app.route("/test")
 def api_test():
   ret = config.getCurrentState()
-  
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret

@@ -1,18 +1,18 @@
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """
 Handles the actual control of the devices.
 
@@ -34,20 +34,20 @@ class Router (threading.Thread):
   def __init__(self, config):
     threading.Thread.__init__(self)
 
-    self.CONFIG = config    
+    self.CONFIG = config
 
     self.daemon = True
     self.start()
-  
+
   def updateRoutes(self):
     """
     Grabs a snapshot of the current state and queues it for
     realization.
     """
     state = self.CONFIG.getCurrentState()
-    logger.debug("Queuing route change " + repr(state))
+    logging.debug("Queuing route change " + repr(state))
     self.workList.put(state)
-  
+
   def run(self):
     """Takes care of incoming routing requests"""
     while True:
@@ -60,31 +60,31 @@ class Router (threading.Thread):
     keep_drivers = {}
     inactive_drivers = []
 
-    logger.debug("Processing route change " + repr(order))
-    
+    logging.debug("Processing route change " + repr(order))
+
     drivers = {}
     for z in order:
       drivers.update(order[z]["route"])
-      
+
     for d in drivers:
       if d in self.prevState:
         keep_drivers[d] = drivers[d]
       else:
         new_drivers[d] = drivers[d]
-    
+
     if not self.prevState is None:
       for d in self.prevState:
         if d not in drivers:
           inactive_drivers.append(d)
-    
+
     """ Apply updates """
     self.enableDrivers(new_drivers)
     self.updateDrivers(keep_drivers)
     self.disableDrivers(inactive_drivers)
-    
-    logger.debug("Router->On  = " + repr(new_drivers))
-    logger.debug("Router->Upd = " + repr(keep_drivers))
-    logger.debug("Router->Off = " + repr(inactive_drivers))
+
+    logging.debug("Router->On  = " + repr(new_drivers))
+    logging.debug("Router->Upd = " + repr(keep_drivers))
+    logging.debug("Router->Off = " + repr(inactive_drivers))
 
     """ Store what drivers that are in-use """
     self.prevState = keep_drivers
@@ -93,9 +93,9 @@ class Router (threading.Thread):
     """ Finally, execute any scene specific extras """
     for z in order:
       if "extras" in order[z]:
-        logger.debug(z + " has extras")
+        logging.debug(z + " has extras")
         for e in order[z]["extras"]:
-          logger.debug(e + " has params " + order[z]["extras"][e])
+          logging.debug(e + " has params " + order[z]["extras"][e])
           self.CONFIG.getDriver(e).applyExtras(order[z]["extras"][e])
 
   def enableDrivers(self, drivers):
@@ -107,19 +107,19 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      logger.debug("Enabling %s" % driver)
+      logging.debug("Enabling %s" % driver)
       try:
         if zone is None:
           driver.setPower(True)
         else:
           driver.setPower(zone, True)
       except:
-        logger.error("Driver %s failed to power on" % driver)
+        logging.error("Driver %s failed to power on" % driver)
       try:
         for cmd in drivers[d]:
           driver.handleCommand(zone, cmd, None)
-      except:   
-        logger.error("Driver %s failed during initial command setup" % driver)
+      except:
+        logging.error("Driver %s failed during initial command setup" % driver)
 
   def disableDrivers(self, drivers):
     """Powers off drivers"""
@@ -130,15 +130,15 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      logger.debug("Disabling %s" % driver)
+      logging.debug("Disabling %s" % driver)
       try:
         if zone is None:
           driver.setPower(False)
         else:
           driver.setPower(zone, False)
       except:
-        logger.error("Driver %s failed to power off" % driver)
-    
+        logging.error("Driver %s failed to power off" % driver)
+
   def updateDrivers(self, drivers):
     """Sends new list of commands to drivers"""
     if drivers is None or len(drivers) == 0:
@@ -148,12 +148,12 @@ class Router (threading.Thread):
       driver = self.CONFIG.getDriver(name)
       if driver is None:
         continue
-      logger.debug("Updating %s" % driver)
+      logging.debug("Updating %s" % driver)
       try:
         for cmd in drivers[d]:
           driver.handleCommand(zone, cmd, None)
       except:
-        logger.error("Driver %s failed to update state" % driver)
+        logging.error("Driver %s failed to update state" % driver)
 
   def splitDriverZone(self, driver):
     """Splits drivers with zoning support into two parts"""

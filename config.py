@@ -1,18 +1,18 @@
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """
 The brains of the project.
 
@@ -45,11 +45,11 @@ class Config:
     self.SCENE_TABLE    = setup.SCENE_TABLE
     self.ZONE_TABLE     = setup.ZONE_TABLE
     self.REMOTE_TABLE   = setup.REMOTE_TABLE
-    
+
     # Fix remotes
     for remote in self.REMOTE_TABLE:
       self.REMOTE_TABLE[remote]["active-zone"] = None
-    
+
     # Validate zone structure and provide good defaults
     for z in self.ZONE_TABLE:
       self.ZONE_TABLE[z]["active-scene"] = None
@@ -67,7 +67,7 @@ class Config:
           if not self.ZONE_TABLE[z]["subzones"][s]["video"] is None and self.ZONE_TABLE[z]["video"] is None:
             self.ZONE_TABLE[z]["video"] = []
         self.ZONE_TABLE[z]["active-subzone"] = self.ZONE_TABLE[z]["subzone-default"]
-        
+
 
   def hasScene(self, name):
     """Returns true if scene exists"""
@@ -81,7 +81,7 @@ class Config:
 
   def getSceneList(self, includeAudio=True, includeVideo=True):
     """
-    Get all svailable scenes, 
+    Get all svailable scenes,
     if includeAudio is false, all scenes requiring audio is skipped
     if includeVideo is false, all scenes requiring video is skipped
     (needless to say, if both is false, nothing is returned)
@@ -105,23 +105,23 @@ class Config:
   def hasZone(self, name):
     """Returns true if zone exists"""
     return name in self.ZONE_TABLE
-    
+
   def getSceneZoneUsage(self, name):
     if not self.hasScene(name):
       logging.error("%s is not a scene")
       return []
-      
+
     result = []
     for z in self.ZONE_TABLE:
       if self.ZONE_TABLE[z]["active-scene"] == name:
         result.append(z)
     return result
-  
+
   def getSceneRemoteUsage(self, name):
     if not self.hasScene(name):
       logging.error("%s is not a scene")
       return []
-      
+
     result = []
     for z in self.ZONE_TABLE:
       if self.ZONE_TABLE[z]["active-scene"] == name:
@@ -129,7 +129,7 @@ class Config:
           if self.REMOTE_TABLE[r]["active-zone"] == z:
             result.append(r)
     return result
-  
+
   def getZoneList(self):
     """Get all zones"""
     result = []
@@ -166,27 +166,27 @@ class Config:
     elif not self.hasScene(scene):
       logging.error("%s is not a scene" % scene)
       return False
-    
+
     if self.SCENE_TABLE[scene]["audio"] and self.ZONE_TABLE[zone]["audio"] == None:
       logging.warning("Zone %s does not support audio which is provided by the scene %s" % (zone, scene))
     if self.SCENE_TABLE[scene]["video"] and self.ZONE_TABLE[zone]["video"] == None:
       logging.warning("Zone %s does not support video which is provided by the scene %s" % (zone, scene))
     self.ZONE_TABLE[zone]["active-scene"] = scene
-    
+
     # Handle subzones...
     if self.hasSubZones(zone):
       if self.ZONE_TABLE[zone]["active-subzone"] is None:
         self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
 
     return True
-    
+
   def getZoneScene(self, zone):
     """Get the current scene for a zone"""
     if not self.hasZone(zone):
       logging.error("%s is not a zone" % zone)
       return None
     return self.ZONE_TABLE[zone]["active-scene"]
-  
+
   def clearZoneScene(self, zone):
     """Removes the scene for a zone"""
     if not self.hasZone(zone):
@@ -256,7 +256,7 @@ class Config:
       logging.error("%s is not a remote" % name)
       return None
     return self.REMOTE_TABLE[name]
-  
+
   def setRemoteZone(self, remote, zone):
     """Set the zone which should be controlled by the remote"""
     if not self.hasRemote(remote):
@@ -281,33 +281,33 @@ class Config:
     for remote in self.REMOTE_TABLE:
       result.append(remote)
     return result
-  
+
   def getZoneRemoteList(self, zone):
     """Gets a list of remotes currently controlling the zone"""
     if not self.hasZone(zone):
       logging.error("%s is not a zone" % zone)
       return []
-    
+
     result = []
     for r in self.REMOTE_TABLE:
       if self.REMOTE_TABLE[r]["active-zone"] == zone:
         result.append(r)
     return result
-  
+
   def clearRemoteZone(self, remote):
     if not self.hasRemote(remote):
       logging.error("%s is not a remote" % remote)
       return False
     self.REMOTE_TABLE[remote]["active-zone"] = None
-    return True  
-  
+    return True
+
   def getZoneCommands(self, zone):
     result = {}
     s = self.getZoneScene(zone)
     if s is None:
       return {}
     s = self.getScene(s)
-    
+
     (adrv, vdrv) = self.getZoneDrivers(zone)
 
     adrv = self.getDriver(adrv)
@@ -319,7 +319,7 @@ class Config:
       result.update(vdrv.getCommands())
 
     return result
-    
+
   def getSceneCommands(self, scene):
     if not self.hasScene(scene):
       logging.error("%s is not a scene" % scene)
@@ -337,7 +337,7 @@ class Config:
     """
     This function will compile a list of available commands for a remote
     given what zone it's attached to and what scene is assigned to the zone.
-    
+
     Structure of return is:
     {
       "zone" : {
@@ -360,20 +360,20 @@ class Config:
     if not self.hasRemote(remote):
       logging.error("%s is not a remote" % remote)
       return result
-    
+
     if self.getRemoteZone(remote) == None:
       logging.warning("Remote %s isn't attached to a zone" % remote)
       return result
-    
+
     zname = self.getRemoteZone(remote)
     sname = self.getZoneScene(zname)
     if sname is None:
       logging.warn("Zone %s is not assigned a scene" % zname)
       #return []
-    
+
     result["zone"] = self.getZoneCommands(zname)
     result["scene"] = self.getSceneCommands(sname)
-    
+
     return result
 
   def execZoneCommand(self, remote, command, extras):
@@ -393,14 +393,14 @@ class Config:
       (vdrv, vz) = self.splitDriver(vdrv)
     adrv = self.getDriver(adrv)
     vdrv = self.getDriver(vdrv)
-    
+
     if adrv is not None and scene["audio"]:
       if command in adrv.getCommands():
         return adrv.handleCommand(az, command, extras)
     if vdrv is not None and scene["video"]:
       if command in vdrv.getCommands():
         return vdrv.handleCommand(vz, command, extras)
-        
+
     return False
 
   def execSceneCommand(self, remote, command, extras):
@@ -419,7 +419,7 @@ class Config:
       return drv.handleCommand(None, command, extras)
     else:
       logging.warning("%s is not a command" % command)
-        
+
     return False
 
 
@@ -445,30 +445,30 @@ class Config:
     Shows the current state which indicates what's going on.
     Format:
     {<zone> : [<driver> : { "commands" : [<command>, ...], "extras" : <string>}, ...], ...}
-    
+
     Some examples...
     PS4 is playing in Zone1 and Spotify in Zone2:
-    { 
+    {
       "zone2" : [ "receiver:2", "spotify" ],
       "zone1" : [ "receiver:1", "splitter", "tv" ],
     }
-    
+
     Spotify playing in both Zone1 and Zon2:
     {
       "zone1" : [ "receiver:1", "spotify" ],
       "zone1" : [ "receiver:2", "spotify" ]
     }
-    
+
     DVD on Projector in Zone1:
     {
       "zone1" : [ "receiver:1", "splitter", "screen", "projector", "dvd" ]
     }
-    
+
     There is no relationship between the order of things shown within the array
     """
-    
+
     result = {}
-    
+
     for z in self.ZONE_TABLE:
       route = self.getCurrentRouteForZone(z)
       scene = self.getScene(self.getZoneScene(z))
@@ -494,7 +494,7 @@ class Config:
     if self.ZONE_TABLE[zone]["active-scene"] is None and sceneOverride is None:
       return None
 
-    if sceneOverride is None:      
+    if sceneOverride is None:
       s = self.ZONE_TABLE[zone]["active-scene"]
     else:
       s = sceneOverride
@@ -516,9 +516,9 @@ class Config:
       else:
         adrv = self.ZONE_TABLE[zone]["audio"]
         vdrv = self.ZONE_TABLE[zone]["video"]
-      
+
     sdrv = self.SCENE_TABLE[s]["driver"]
-    
+
     # Translate into route
     if "driver-extras" in self.SCENE_TABLE[s]:
       extras = self.SCENE_TABLE[s]["driver-extras"]
@@ -544,19 +544,19 @@ class Config:
     if sdrv not in self.ROUTING_TABLE:
       logging.error("%s does not have any routing information" % sdrv)
       return []
-    
+
     if vdrv == None or not "audio+video" in self.ROUTING_TABLE[sdrv]:
       baseRoutes = self.ROUTING_TABLE[sdrv]["audio"]
     else:
       baseRoutes = self.ROUTING_TABLE[sdrv]["audio+video"]
-    
+
     routes = self.filterRoutes(baseRoutes, adrv)
     if not vdrv is None:
       routes = self.filterRoutes(routes, vdrv)
 
     if len(routes) != 1:
       logging.warning("Routing was inconclusive, got %d routes" % len(routes))
-      
+
     route = routes[0]
     if not sdrv in route:
       route[sdrv] = []
@@ -580,7 +580,7 @@ class Config:
         result.append(route)
 
     return result
-  
+
   def translateDriver(self, driver):
     """Removes the :xxx from driver"""
     ret = driver.split(":", 1)
@@ -596,7 +596,7 @@ class Config:
       return (ret[0], "")
     else:
       return (ret[0], ret[1])
-      
+
   def translateRoute(self, zone, route):
     """
     Takes a route and adjusts drivers based on zone, this is needed since some
@@ -641,39 +641,39 @@ class Config:
         - Don't do it
         - Set other zone(s) to same routing
         - Unassign other zones
-        
+
     This function returns None if no conflict exists and an array of zones
     which would be impacted if there is a conflict.
     """
-    
+
     # Get current state and remove our zone
     active = self.getCurrentState()
     active.pop(zone, None)
-    
+
     if len(active) == 0:
       return None
-    
+
     # Now, generate a route based on provided information
     route = self.getCurrentRouteForZone(zone, None, scene)
-    
+
     # Find any overlap of drivers
     result = []
     for z in active:
-      logger.debug("Checking zone " + z)
+      logging.debug("Checking zone " + z)
       for d in active[z]["route"]:
         if d in route:
-          logger.warning("Overlap detected, %s is already in use")
+          logging.warning("Overlap detected, %s is already in use")
           result.append(z)
           break
-    
+
     if len(result) > 0:
       return result
     return None
-    
+
   def getDriver(self, driver):
     if driver is None:
       return None
-      
+
     (driver, ignore) = self.translateDriver(driver)
     if not driver in self.DRIVER_TABLE:
       logging.error("%s is not a driver" % driver)
