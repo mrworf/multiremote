@@ -19,14 +19,16 @@ the system.
 
 ## Related projects
 
-* ircontroller - A small REST-2-IR gateway using USB IR Toy v2
-* ir-devices - Holds the IR codes to use with ircontroller
-* yamahacontroller - REST-2-RS232 gateway to talk to Yamaha receivers with serial interface
-* multiRemoteWeb - The HTML5/jQuery/Socket.IO based UX (not yet released)
+* IR-2-REST Gateway - REST interface allowing access to USB IR Toy v2
+* ir-devices - Holds the IR codes to use with IR-2-REST
+* Yamaha-2-REST Gateway - REST interface allowing access to Yamaha receivers with serial interface
+* multiREMOTE UX - The HTML5/jQuery/Socket.IO based UX
+
+All above mentioned projects can be found at https://github.com/mrworf
 
 ## Currently supported device
 
-* Yamaha RX-V1900 via yamahacontroller
+* Yamaha RX-V1900 via Yamaha-2-REST
 * Plex Home Theater via built-in driver
 * Roku via built-in driver
-* Any IR device which can be taught to ircontroller
+* Any IR device which can be taught to IR-2-REST
