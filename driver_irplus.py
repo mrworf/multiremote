@@ -1,18 +1,18 @@
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """
 Improved IR driver which uses a separate config file to produce
 desired results.
@@ -79,8 +79,8 @@ class DriverIRPlus(DriverNull):
 
     for cmd in data["commands"]:
       self.COMMAND_HANDLER[cmd] = {
-        "arguments"   : 0, 
-        "handler"     : self.sendCommand, 
+        "arguments"   : 0,
+        "handler"     : self.sendCommand,
         "extras"      : cmd,
         "name"        : cmd,
         "description" : cmd,
@@ -128,7 +128,12 @@ class DriverIRPlus(DriverNull):
     ir = self.ircmds[command]
 
     url = self.server + "/write/" + ir
-    r = requests.get(url)
+    try:
+      r = requests.get(url)
+    except:
+      logging.exception("sendIr: " + url)
+      return False
+
     if r.status_code != 200:
       logging.error("Driver was unable to execute %s" % url)
       return False
