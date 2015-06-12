@@ -33,7 +33,7 @@ import time
 import logging
 import argparse
 
-
+from remotemgr import RemoteManager
 from router import Router
 from config import Config
 
@@ -61,23 +61,29 @@ logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asc
 logging.getLogger("Flask-Cors").setLevel(logging.ERROR)
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
+""" Initialize the REST server """
 app = Flask(__name__)
 cors = CORS(app) # Needed to make us CORS compatible
 
-config = Config()
-router = Router(config)
+""" Create the various cogs of the machinery """
+remotes = RemoteManager()
+config  = Config(remotes)
+router  = Router(config)
 
+""" Start defining REST end-points """
 @app.route("/")
 def api_root():
   msg = {"status": "ok"}
   result = jsonify(msg)
   result.status_code = 200
-
   return result
 
 @app.route("/scene", defaults={"scene" : None})
 @app.route("/scene/<scene>")
 def api_scene(scene):
+  """
+  Allows probing of the various scenes provided by multiREMOTE 
+  """
   ret = {}
 
   if scene is None:
@@ -108,6 +114,9 @@ def api_scene(scene):
 @app.route("/zone", defaults={"zone" : None})
 @app.route("/zone/<zone>")
 def api_zone(zone):
+  """
+  Allows probing of the various zones provided by multiREMOTE
+  """
   ret = {}
 
   if zone is None:
@@ -140,7 +149,8 @@ def api_zone(zone):
 @app.route("/subzone/<zone>", defaults={"subzone" : None})
 @app.route("/subzone/<zone>/<subzone>")
 def api_subzone(zone, subzone):
-  """ Changes the subzone for a specific zone
+  """ 
+  Changes the subzone for a specific zone
   """
   ret = {}
   if not config.hasSubZones(zone):
@@ -170,6 +180,7 @@ def api_assign(zone, scene, options):
   Options can be either clone or unassign:
     clone = Other zones will do the same thing
     unassign = Other zones will be unassigned
+  These are used in situations where assigning a zone fails with a conflict.
   """
   ret = {}
 
@@ -207,8 +218,11 @@ def api_assign(zone, scene, options):
 @app.route("/unassign", defaults={"zone" : None})
 @app.route("/unassign/<zone>")
 def api_unassign(zone):
-  ret = {
-  }
+  """
+  Removes any scenes assigned to a zone, also resets subzone back to
+  the defined default.
+  """
+  ret = {}
 
   if zone == None:
     ret["zones"] = config.getZoneList()
@@ -226,20 +240,25 @@ def api_unassign(zone):
 @app.route("/attach/<remote>/<zone>", defaults={"options" : None})
 @app.route("/attach/<remote>/<zone>/<options>")
 def api_attach(remote, zone, options):
+  """
+  Attaches a remote to a zone, so that it can control it
+  """
   ret = {}
 
   if remote is None:
-    ret["remotes"] = config.getRemoteList()
+    r = []
+    for z in config.getZoneList():
+      i = config.getZoneRemoteList(z)
+      r.extend(i)
+    ret["active"] = r
   else:
-    if zone == None:
-      ret["zones"] = config.getZoneList()
+    if remotes.has(remote):
+      if not zone is None:
+        config.setRemoteZone(remote, zone)
+        ret["users"] = config.getZoneRemoteList(zone)
+      ret["active"] = config.getRemoteZone(remote)
     else:
-      if options == "check":
-        pass
-      else:
-         config.setRemoteZone(remote, zone)
-      ret["users"] = config.getZoneRemoteList(zone)
-    ret["active"] = config.getRemoteZone(remote)
+      ret["error"] = "No such remote " + remote
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -247,8 +266,12 @@ def api_attach(remote, zone, options):
 
 @app.route("/detach/<remote>")
 def api_detach(remote):
+  """
+  Detaches a remote from the selected zone. 
+  In detached state, no scenes or commands are available
+  """
+
   ret = {
-    "status" : 200,
     "active" : None
   }
   config.clearRemoteZone(remote)
@@ -299,14 +322,95 @@ def api_command(remote, category, command, arguments):
   ret.status_code = 200
   return ret
 
-@app.route("/test")
-def api_test():
+@app.route("/debug")
+def api_debug():
+  """
+  Handy endpoint which prints out current routing/state of the system,
+  useful for debugging purposes.
+  """
   ret = config.getCurrentState()
 
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
 
+@app.route("/register/<pin>/<name>/<desc>/<zone>")
+def api_register(pin, name, desc, zone):
+  """
+  Allows remotes to register themselves with the system. For registration,
+  remote must provide:
+  <pin>  = PIN which has been configured in multiremote, or an existing UUID
+  <name> = Human-readable name that can be used by the system
+  <desc> = Short human-readable description of device
+  <zone> = Zone which should be considered the default or home zone for the remote
+
+  Upon success, the server will return a UNIQUE id which has to be used in situations
+  where you refer to the remote.
+
+  Should it fail, the server returns error AND a description of why.
+
+  Registering an existing remote will invalidate the old UID, making that invalid.
+  Reregistering can be used to change the name, desc or zone if the UUID is provided
+  as PIN.
+
+  Registrations are saved as a JSON file locally on the server and should only
+  be edited (or deleted) when the server isn't running.
+  """
+  ret = {}
+  if not config.checkPin(pin):
+    ret["error"] = "Invalid PIN"
+  else:
+    if config.getZone(zone) is None:
+      ret["error"] = "No such zone " + zone
+    else:
+      ret["uuid"] = remotes.register(name, desc, zone)
+
+  ret = jsonify(ret)
+  ret.status_code = 200
+  return ret
+
+@app.route("/unregister/<pin>/<uuid>")
+def api_unregister(pin, uuid):
+  """
+  Removes a registered remote from the system, also detaches
+  from any zone it might be a member of.
+  """
+  ret = {}
+  if not config.checkPin(pin, False):
+    ret["error"] = "Invalid PIN"
+  elif not remotes.has(uuid):
+    ret["error"] = "No such remote " + uuid
+  else:
+    config.clearRemoteZone(uuid)
+    remotes.unregister(uuid)
+    ret["status"] = "Remote has been unregistered"
+  
+  ret = jsonify(ret)
+  ret.status_code = 200
+  return ret
+
+@app.route("/remotes", defaults={"uuid": None})
+@app.route("/remotes/<uuid>")
+def api_remotes(uuid):
+  """
+  Lists all registered remotes and which zones they're currently
+  attached to.
+  """
+  ret = {}
+  if uuid is None:
+    ret = {"remotes" : remotes.list()}
+  elif uuid == "*":
+    for r in remotes.list():
+      ret[r] = remotes.describe(r)
+  else:
+    ret = remotes.describe(uuid)
+    ret["uuid"] = uuid
+  ret = jsonify(ret)
+  ret.status_code = 200
+  return ret
+
+
+""" Finally, launch! """
 if __name__ == "__main__":
   app.debug = False
   logging.info("multiRemote running")

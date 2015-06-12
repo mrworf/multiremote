@@ -22,7 +22,7 @@ should it be possible.
 Also able to reply back regarding state of various parts of the system
 """
 from commandtype import CommandType
-from setup import RemoteSetup
+from setup import SystemSetup
 import logging
 
 class Config:
@@ -30,25 +30,20 @@ class Config:
   ROUTING_TABLE = None
   SCENE_TABLE = None
   ZONE_TABLE = None
-  REMOTE_TABLE = None
 
-  def __init__(self):
-
+  def __init__(self, remotemgr):
     """
     At this point, initialize some extra parameters, such as the combined
     capabilties of zones which have sub-zones.
     """
     # Load data
-    setup = RemoteSetup()
+    setup = SystemSetup()
     self.DRIVER_TABLE   = setup.DRIVER_TABLE
     self.ROUTING_TABLE  = setup.ROUTING_TABLE
     self.SCENE_TABLE    = setup.SCENE_TABLE
     self.ZONE_TABLE     = setup.ZONE_TABLE
-    self.REMOTE_TABLE   = setup.REMOTE_TABLE
-
-    # Fix remotes
-    for remote in self.REMOTE_TABLE:
-      self.REMOTE_TABLE[remote]["active-zone"] = None
+    self.OPTIONS        = setup.OPTIONS
+    self.REMOTEMGR      = remotemgr
 
     # Validate zone structure and provide good defaults
     for z in self.ZONE_TABLE:
@@ -125,8 +120,8 @@ class Config:
     result = []
     for z in self.ZONE_TABLE:
       if self.ZONE_TABLE[z]["active-scene"] == name:
-        for r in self.REMOTE_TABLE:
-          if self.REMOTE_TABLE[r]["active-zone"] == z:
+        for r in self.REMOTEMGR.list():
+          if self.REMOTEMGR.get(r, "active-zone") == z:
             result.append(r)
     return result
 
@@ -246,41 +241,23 @@ class Config:
       return False
     return self.ZONE_TABLE[zone]["video"] != None
 
-  def hasRemote(self, name):
-    """Check if remote exists"""
-    return name in self.REMOTE_TABLE
-
-  def getRemote(self, name):
-    """Get remote"""
-    if not self.hasRemote(name):
-      logging.error("%s is not a remote" % name)
-      return None
-    return self.REMOTE_TABLE[name]
-
   def setRemoteZone(self, remote, zone):
     """Set the zone which should be controlled by the remote"""
-    if not self.hasRemote(remote):
+    if not self.REMOTEMGR.has(remote):
       logging.error("%s is not a remote" % remote)
       return False
     if not self.hasZone(zone):
       logging.error("%s is not a zone" % zone)
       return False
-    self.REMOTE_TABLE[remote]["active-zone"] = zone
+    self.REMOTEMGR.set(remote, "active-zone", zone)
     return True
 
   def getRemoteZone(self, name):
     """Get the zone which the remote is controlling"""
-    if not self.hasRemote(name):
+    if not self.REMOTEMGR.has(name):
       logging.error("%s is not a remote" % name)
       return None
-    return self.REMOTE_TABLE[name]["active-zone"]
-
-  def getRemoteList(self):
-    """Get list of remotes registered in the system"""
-    result = []
-    for remote in self.REMOTE_TABLE:
-      result.append(remote)
-    return result
+    return self.REMOTEMGR.get(name, "active-zone")
 
   def getZoneRemoteList(self, zone):
     """Gets a list of remotes currently controlling the zone"""
@@ -289,16 +266,16 @@ class Config:
       return []
 
     result = []
-    for r in self.REMOTE_TABLE:
-      if self.REMOTE_TABLE[r]["active-zone"] == zone:
+    for r in self.REMOTEMGR.list():
+      if self.REMOTEMGR.get(r, "active-zone") == zone:
         result.append(r)
     return result
 
   def clearRemoteZone(self, remote):
-    if not self.hasRemote(remote):
+    if not self.REMOTEMGR.has(remote):
       logging.error("%s is not a remote" % remote)
       return False
-    self.REMOTE_TABLE[remote]["active-zone"] = None
+    self.REMOTEMGR.set(remote, "active-zone", None)
     return True
 
   def getZoneCommands(self, zone):
@@ -357,7 +334,7 @@ class Config:
     }
     """
     result = {"zone" : {}, "scene" : {}}
-    if not self.hasRemote(remote):
+    if not self.REMOTEMGR.has(remote):
       logging.error("%s is not a remote" % remote)
       return result
 
@@ -377,7 +354,7 @@ class Config:
     return result
 
   def execZoneCommand(self, remote, command, extras):
-    if not self.hasRemote(remote):
+    if not self.REMOTEMGR.has(remote):
       logging.error("%s is not a remote" % remote)
       return False
     zone = self.getRemoteZone(remote)
@@ -405,7 +382,7 @@ class Config:
 
   def execSceneCommand(self, remote, command, extras):
     logging.debug("execSceneCommand called")
-    if not self.hasRemote(remote):
+    if not self.REMOTEMGR.has(remote):
       logging.error("%s is not a remote" % remote)
       return False
     zone = self.getRemoteZone(remote)
@@ -679,3 +656,14 @@ class Config:
       logging.error("%s is not a driver" % driver)
       return None
     return self.DRIVER_TABLE[driver]
+
+  def checkPin(self, pin, allowUUID=True):
+    """
+    Tests if the provided pin matches pin-remote or an existing UUID
+    UUID matching can be disabled.
+    """
+    if allowUUID and len(pin) == 32:
+      logging.debug("PIN is a UUID, look up the remote instead")
+      return self.REMOTEMGR.has(pin)
+    else:
+      return pin == self.OPTIONS["pin-remote"]
