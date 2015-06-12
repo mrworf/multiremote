@@ -362,6 +362,8 @@ def api_register(pin, name, desc, zone):
   else:
     if config.getZone(zone) is None:
       ret["error"] = "No such zone " + zone
+    elif len(pin) == 32:
+      ret["uuid"] = remotes.register(name, desc, zone, pin)
     else:
       ret["uuid"] = remotes.register(name, desc, zone)
 

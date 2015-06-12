@@ -74,12 +74,19 @@ class RemoteManager:
       logging.exception("Unable to save " + self.FILENAME)
       return
 
-  def register(self, name, desc, zone):
+  def register(self, name, desc, zone, uuid=None):
     """
     Registers a remote with the system. If there already is
     a remote by a certain name, it will be overwritten.
     """
-    id = uuid.uuid4().hex
+    if uuid == None:
+      id = uuid.uuid4().hex
+    elif self.has(uuid):
+      id = uuid
+    else:
+      logging.error("Tried to update " + uuid + " but it's not in database")
+      return None
+
     self.REMOTES[id] = {"name" : name, "description" : desc, "zone" : zone}
     self.save()
     return id;
