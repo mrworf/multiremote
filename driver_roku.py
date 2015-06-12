@@ -23,12 +23,18 @@ a home may contain more than one device, making it important that the
 driver can be directed to a specific ROKU.
 
 Does not support power functions, but will automatically navigate home
-when getting power off (to avoid stream stuff when noone is watching)
+when getting power off (to avoid streaming stuff when noone is watching)
 
 This is the first driver to support the driver-extras directive. This
 information is provided by the applyExtras() API call and is called
 whenever a device selected. Meaning you may get setPower() once but
 applyExtras() multiple times if you have plenty of roku scenes.
+
+The information in driver-extras should be:
+  app=<name of app>
+
+This will cause the driver to automatically start the correct app
+when user activates the scene.
 """
 
 from driver_null import DriverNull

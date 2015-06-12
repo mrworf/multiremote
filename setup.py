@@ -186,7 +186,8 @@ class SystemSetup:
   detect when there will be a conflict.
 
   DRIVER-EXTRAS adds a possibility to supply extra details which is handled
-  by the driver. Usually a comma separated list of key/value pairs
+  by the driver. Usually a comma separated list of key/value pairs. Each
+  driver will describe it's need of this.
 
   NAME is the name to show in the display
 
@@ -195,6 +196,14 @@ class SystemSetup:
   AUDIO if true indicates that this scene provides audio (limits zones)
 
   VIDEO if true indicates that this scene provides video (limits zones)
+
+  UX-HINT provides purely cosmetic information that is exposed to the clients.
+  It's a comma separated list of key/value pairs.
+
+  Typically UX-HINT holds:
+    android-app: Package name for an android app which allows better control 
+    category: Imply what this is used for (music, video, gaming, etc...)
+    icon: name for an icon to be shown
 
   """
 
