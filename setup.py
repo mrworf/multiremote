@@ -16,6 +16,9 @@
 """
 This class describes your specific setup, it's automatically loaded into the
 config.py class which uses this data as it sees fit.
+
+Eventually this file can be generated from a web-ui, but for now you need to
+know your python. Sorry :-(
 """
 from driver_rxv1900 import DriverRXV1900
 from driver_spotify import DriverSpotify
@@ -26,12 +29,22 @@ from driver_basicir import DriverBasicIR
 
 from commandtype import CommandType
 
-class RemoteSetup:
+class SystemSetup:
+  """
+  PIN_REMOTE defines a PIN (actually, could be any combination of letters and numbers)
+  that must be provided to register new remotes.
+  """
+  OPTIONS = {
+    "pin-remote" : "1234",
+  }
+
   """
   Lists and loads the various devices which will be needed by
   the controller.
+
+  If you have most of hosted on one server, it's recommended to use
+  a variable to make changes easier (see AV example).
   """
-  #AV="http://av-interface.sfo.sensenet.nu"
   AV="http://usb-network.sfo.sensenet.nu"
 
 
