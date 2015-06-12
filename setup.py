@@ -327,36 +327,5 @@ class SystemSetup:
       "ux-hint" : "",
     }
   }
-
-  """
-  Remote configuration
-
-  Currently it's a static configuration and it uses basic HTTP authentication
-  to avoid "mistakes" by regular browsers. Username is derived from the base
-  key and the password is held within.
-
-  It also defines the home zone for a remote. The idea is that usually a remote
-  will charge in relation to the zone it will control.
-
-  This list also holds information needed during runtime which you normally
-  do not supply during configuration.
-
-  Note!
-  Password not yet implemented
-  """
-  REMOTE_TABLE = {
-    "kitchen" : {
-      "name"        : "Kitchen",
-      "description" : '10" kitchen tablet',
-      "zone"        : "zone2",
-      "password"    : "secret",
-    },
-
-    "livingroom" : {
-      "name"        : "Livingroom",
-      "description" : '7" entertainment phablet',
-      "zone"        : "zone1",
-      "password"    : "secret",
-    }
-  }
+}
 
