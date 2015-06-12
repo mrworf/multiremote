@@ -336,5 +336,3 @@ class SystemSetup:
       "ux-hint" : "",
     }
   }
-}
-
