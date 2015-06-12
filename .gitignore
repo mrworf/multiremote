@@ -1,3 +1,5 @@
+remotes.json
+
 html/dependencies/*
 !html/dependencies/README
 
