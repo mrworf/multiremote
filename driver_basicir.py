@@ -71,9 +71,9 @@ class DriverBasicIR(DriverNull):
 
     ir = self.ircmds[command]
 
-    url = self.server + "/write/" + ir
+    url = self.server + "/write"
     try:
-      r = requests.get(url, timeout=5)
+      r = requests.post(url, data=json.dumps(ir), timeout=5)
     except:
       logging.exception("sendIr: " + url)
       return False

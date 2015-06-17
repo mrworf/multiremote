@@ -127,9 +127,9 @@ class DriverIRPlus(DriverNull):
 
     ir = self.ircmds[command]
 
-    url = self.server + "/write/" + ir
+    url = self.server + "/write"
     try:
-      r = requests.get(url)
+      r = requests.post(url, data=json.dumps(ir))
     except:
       logging.exception("sendIr: " + url)
       return False
