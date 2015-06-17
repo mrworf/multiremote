@@ -82,7 +82,7 @@ def api_root():
 @app.route("/scene/<scene>")
 def api_scene(scene):
   """
-  Allows probing of the various scenes provided by multiREMOTE 
+  Allows probing of the various scenes provided by multiREMOTE
   """
   ret = {}
 
@@ -149,7 +149,7 @@ def api_zone(zone):
 @app.route("/subzone/<zone>", defaults={"subzone" : None})
 @app.route("/subzone/<zone>/<subzone>")
 def api_subzone(zone, subzone):
-  """ 
+  """
   Changes the subzone for a specific zone
   """
   ret = {}
@@ -267,7 +267,7 @@ def api_attach(remote, zone, options):
 @app.route("/detach/<remote>")
 def api_detach(remote):
   """
-  Detaches a remote from the selected zone. 
+  Detaches a remote from the selected zone.
   In detached state, no scenes or commands are available
   """
 
@@ -386,7 +386,7 @@ def api_unregister(pin, uuid):
     config.clearRemoteZone(uuid)
     remotes.unregister(uuid)
     ret["status"] = "Remote has been unregistered"
-  
+
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
@@ -406,7 +406,10 @@ def api_remotes(uuid):
       ret[r] = remotes.describe(r)
   else:
     ret = remotes.describe(uuid)
-    ret["uuid"] = uuid
+    if ret is None:
+      ret = {"error": "No such remote"}
+    else:
+      ret["uuid"] = uuid
   ret = jsonify(ret)
   ret.status_code = 200
   return ret
