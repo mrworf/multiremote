@@ -26,12 +26,26 @@ The whole concept is based on remotes being attached/detached to zones and
 scenes. Attach/Detach will NOT automatically power things on/off but attaching
 to a new scene will automatically detach from the previous.
 """
+
+import logging
+import argparse
+
+""" Parse command line """
+parser = argparse.ArgumentParser(description="multiRemote - The future of IoT based remote control for your home", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--logfile', metavar="FILE", help="Log to file instead of stdout")
+parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
+parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
+cmdline = parser.parse_args()
+
+""" Setup logging first """
+logging.getLogger('').handlers = []
+logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s')
+
+""" Continue with the rest """
 from flask import Flask, jsonify
 import threading
 import Queue
 import time
-import logging
-import argparse
 
 from remotemgr import RemoteManager
 from router import Router
@@ -45,17 +59,6 @@ except ImportError:
   parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
   os.sys.path.insert(0, parentdir)
   from flask.ext.cors import CORS
-
-""" Parse it! """
-parser = argparse.ArgumentParser(description="multiRemote - The future of IoT based remote control for your home", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--logfile', metavar="FILE", help="Log to file instead of stdout")
-parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
-parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
-cmdline = parser.parse_args()
-
-
-""" Setup logging """
-logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s')
 
 """ Disable some logging by-default """
 logging.getLogger("Flask-Cors").setLevel(logging.ERROR)
