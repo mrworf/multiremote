@@ -1,18 +1,18 @@
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """ CommandType class contains all the various types of commands,
     depending on the type and flag(s), there may be different
     behaviors exposed in the various drivers and/or server.
@@ -37,7 +37,7 @@ class CommandType:
   CATEGORY_VIDEO  = 2
   CATEGORY_GAME   = 3
 
-  """ Definition of commands 
+  """ Definition of commands
   """
   VOLUME_UP       = 1
   VOLUME_DOWN     = 2
@@ -48,11 +48,11 @@ class CommandType:
   PLAYBACK_PLAY           = 100
   PLAYBACK_PAUSE          = 101
   PLAYBACK_STOP           = 102
-  PLAYBACK_NEXT           = 103 
-  PLAYBACK_PREVIOUS       = 104 
-  PLAYBACK_CNEXT          = 105 
-  PLAYBACK_CPREVIOUS      = 106 
-  PLAYBACK_FASTFORWARD    = 107 
+  PLAYBACK_NEXT           = 103
+  PLAYBACK_PREVIOUS       = 104
+  PLAYBACK_CNEXT          = 105
+  PLAYBACK_CPREVIOUS      = 106
+  PLAYBACK_FASTFORWARD    = 107
   PLAYBACK_REWIND         = 108
 
   PLAYBACK_SKIP_FORWARD   = 109 # Usually 15s
@@ -71,7 +71,9 @@ class CommandType:
   PLAYBACK_ANGLE          = 119
   PLAYBACK_EJECT          = 120
 
-  NAVIGATE_UP           = 200 
+  PLAYBACK_PLAYPAUSE      = 121
+
+  NAVIGATE_UP           = 200
   NAVIGATE_DOWN         = 201
   NAVIGATE_LEFT         = 202
   NAVIGATE_RIGHT        = 203
