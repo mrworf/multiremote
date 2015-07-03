@@ -45,7 +45,7 @@ class SystemSetup:
   If you have most of hosted on one server, it's recommended to use
   a variable to make changes easier (see AV example).
   """
-  AV="http://usb-network.sfo.sensenet.nu"
+  AV="http://raspberry.sfo.sensenet.nu"
 
 
   DRIVER_TABLE = {
@@ -201,7 +201,7 @@ class SystemSetup:
   It's a comma separated list of key/value pairs.
 
   Typically UX-HINT holds:
-    android-app: Package name for an android app which allows better control 
+    android-app: Package name for an android app which allows better control
     category: Imply what this is used for (music, video, gaming, etc...)
     icon: name for an icon to be shown
 
