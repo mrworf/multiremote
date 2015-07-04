@@ -42,6 +42,11 @@ logging.getLogger('').handlers = []
 logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s')
 
 """ Continue with the rest """
+
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+
 from flask import Flask, jsonify
 import threading
 import Queue
@@ -422,4 +427,7 @@ def api_remotes(uuid):
 if __name__ == "__main__":
   app.debug = False
   logging.info("multiRemote running")
-  app.run(host=cmdline.listen, port=cmdline.port)
+  #app.run(host=cmdline.listen, port=cmdline.port)
+  http_server = HTTPServer(WSGIContainer(app))
+  http_server.listen(5000)
+  IOLoop.instance().start()
