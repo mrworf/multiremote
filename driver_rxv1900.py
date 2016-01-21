@@ -401,6 +401,12 @@ class DriverRXV1900:
         "name"        : "Input DVD",
         "type"        : CommandType.PRIVATE_INPUT
       },
+      "input-cd"      : {
+        "arguments"   : 0,
+        "handler"     : self.setInput, "extras" : "input-cd",
+        "name"        : "Input CD",
+        "type"        : CommandType.PRIVATE_INPUT
+      },
     }
 
   def getCommands(self):
