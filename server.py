@@ -44,8 +44,9 @@ logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asc
 """ Continue with the rest """
 
 from tornado.wsgi import WSGIContainer
-from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
+from tornado.web import Application, FallbackHandler
+from tornado.websocket import WebSocketHandler
 
 from flask import Flask, jsonify
 import threading
@@ -77,6 +78,17 @@ cors = CORS(app) # Needed to make us CORS compatible
 remotes = RemoteManager()
 config  = Config(remotes)
 router  = Router(config)
+
+""" Tracking information """
+event_subscribers = []
+
+def notifySubscribers(zone, message):
+  for subscriber in event_subscribers:
+    if config.getRemoteZone(subscriber.remoteId) == zone:
+      logging.info("Informing remote %s about \"%s\"", subscriber.remoteId, message)
+      subscriber.write_message(message)
+    else:
+      logging.info("Skipped remote %s", subscriber.remoteId)
 
 """ Start defining REST end-points """
 @app.route("/")
@@ -148,6 +160,7 @@ def api_zone(zone):
       if config.hasSubZones(zone):
         ret[zone]["subzones"] = config.getSubZoneList(zone)
         ret[zone]["subzone"] = config.getSubZone(zone)
+        ret[zone]["subzone-default"] = config.getSubZoneDefault(zone)
     if len(zones) == 1:
       ret = ret[zones[0]]
   ret = jsonify(ret)
@@ -218,6 +231,8 @@ def api_assign(zone, scene, options):
     ret["active"] = config.getZoneScene(zone)
     ret["zone"] = zone
 
+    notifySubscribers(zone, {"type":"scene", "data": {"scene" : config.getZoneScene(zone) } })
+
   ret = jsonify(ret)
   ret.status_code = 200
 
@@ -236,6 +251,8 @@ def api_unassign(zone):
     ret["zones"] = config.getZoneList()
   else:
     config.clearZoneScene(zone)
+    config.clearSubZone(zone)
+    notifySubscribers(zone, {"type":"scene", "data": {"scene" : None } })
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -422,12 +439,31 @@ def api_remotes(uuid):
   ret.status_code = 200
   return ret
 
+class WebSocket(WebSocketHandler):
+  def open(self, remoteId):
+    logging.info("Remote %s has connected", remoteId);
+    if not remotes.has(remoteId):
+      logging.warning("No such remote registered, close connection");
+      self.finish();
+    else:
+      event_subscribers.append(self)
+      self.remoteId = remoteId
+
+  def on_message(self, message):
+    logging.debug("Remote %s message: %s", self.remoteId, message)
+
+  def on_close(self):
+    logging.info("Remote %s has disconnected", self.remoteId)
+    event_subscribers.remove(self)
 
 """ Finally, launch! """
 if __name__ == "__main__":
   app.debug = False
   logging.info("multiRemote running")
-  #app.run(host=cmdline.listen, port=cmdline.port)
-  http_server = HTTPServer(WSGIContainer(app))
-  http_server.listen(5000)
+  container = WSGIContainer(app)
+  server = Application([
+    (r'/events/(.*)', WebSocket),
+    (r'.*', FallbackHandler, dict(fallback=container))
+    ])
+  server.listen(5000)
   IOLoop.instance().start()
