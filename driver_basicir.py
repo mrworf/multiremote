@@ -55,11 +55,11 @@ class DriverBasicIR(DriverNull):
       }
 
   def eventOn(self):
-    logging.debug("eventOff() for %s" % self.file)
+    logging.debug("eventOn() for %s" % self.file)
     self.sendIr(self.code_on)
 
   def eventOff(self):
-    logging.debug("eventOn() for %s" % self.file)
+    logging.debug("eventOff() for %s" % self.file)
     self.sendIr(self.code_off)
 
   def sendCommand(self, zone, command):

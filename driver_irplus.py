@@ -114,11 +114,14 @@ class DriverIRPlus(DriverNull):
     return True
 
   def sendCommand(self, zone, command):
+    logging.debug("Sending command: " + repr(command))
     seq = command.split(",")
     for cmd in seq:
       if cmd.isdigit():
+        logging.debug("Command sequence: Sleep %s ms" % cmd)
         time.sleep(int(cmd)/1000.0)
       else:
+        logging.debug("Command sequence: Sending %s" % cmd)
         self.sendIr(cmd)
 
   def sendIr(self, command):
