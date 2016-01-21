@@ -26,6 +26,7 @@ from driver_irplus  import DriverIRPlus
 from driver_plex    import DriverPlex
 from driver_roku    import DriverRoku
 from driver_basicir import DriverBasicIR
+from driver_null    import DriverNull
 
 from commandtype import CommandType
 
@@ -58,6 +59,7 @@ class SystemSetup:
     "projector" : DriverIRPlus(AV + ":5001", "config/projector.json"),
     "plex"      : DriverPlex("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth1"),
     "roku"      : DriverRoku("roku.sfo.sensenet.nu"),
+    "null1"     : DriverNull(),
   }
 
   """
@@ -119,6 +121,10 @@ class SystemSetup:
   ROUTING_TABLE = {
     "spotify" : {
       "audio" : [{"receiver"  : ["input-mdcdr"]}],
+    },
+
+    "null1" : {
+      "audio" : [{"receiver" : ["input-cd"]}],
     },
 
     "plex" : {
@@ -211,10 +217,19 @@ class SystemSetup:
     "spotify" : {
       "driver"      : "spotify",
       "name"        : "Spotify",
-      "description" : "Allows you to listen to music (Swedish Spotify)",
+      "description" : "Allows you to listen to music",
       "audio"       : True,
       "video"       : False,
       "ux-hint"     : "android-app=com.spotify.music,category=music,icon=spotify",
+    },
+
+    "airplay" : {
+      "driver"      : "null1",
+      "name"        : "AirPlay",
+      "description" : 'Streams from "House Speakers"',
+      "audio"       : True,
+      "video"       : False,
+      "ux-hint"     : 'category=music,icon=airplay,message=Connect your iOS device to "House Speakers" to stream music to the speakers',
     },
 
     "dvd" : {
