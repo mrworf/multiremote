@@ -197,6 +197,13 @@ class Config:
       return None
     return self.ZONE_TABLE[zone]["active-subzone"]
 
+  def getSubZoneDefault(self, zone):
+    """Get active subzone for a zone"""
+    if not self.hasSubZones(zone):
+      logging.error("%s does not have subzones" % zone)
+      return None
+    return self.ZONE_TABLE[zone]["subzone-default"]
+
   def setSubZone(self, zone, sub):
     """Set the subzone for a zone"""
     if not self.hasSubZone(zone, sub):
@@ -210,7 +217,7 @@ class Config:
     if not self.hasSubZones(zone):
       logging.error("%s does not have subzones" % zone)
       return False
-    self.ZONE_TABLE[zone]["active-subzone"] = self.ZONE_TABLE[zone]["subzone-default"]
+    self.ZONE_TABLE[zone]["active-subzone"] = self.getSubZoneDefault(zone)
     return True
 
   def getSubZoneList(self, zone):
