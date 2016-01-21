@@ -3,11 +3,11 @@
   "commands" : {
     "on" : {
       "type" : 901,
-      "sequence" : "toggle"
+      "sequence" : "power"
     },
     "off" : {
       "type" : 902,
-      "sequence" : "toggle"
+      "sequence" : "power"
     },
 
     "angle" : { "type" : 118 },
@@ -25,6 +25,10 @@
     "enter" : { "type" : 204 },
     "topmenu" : { "type" : 208 },
     "menu" : { "type" : 207 },
-    "return" : { "type" : 205 }
+    "return" : { "type" : 205 },
+    "setup" : { "type" : 206 },
+
+    "rewind" : { "type" : 108 },
+    "fastforward" : { "type" : 107 }
   }
 }
