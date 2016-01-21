@@ -193,10 +193,10 @@ def api_subzone(zone, subzone):
   return ret
 
 @app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
-@app.route("/assign/<zone>", defaults={"scene" : None, "options" : None})
-@app.route("/assign/<zone>/<scene>", defaults={"options" : None})
-@app.route("/assign/<zone>/<scene>/<options>")
-def api_assign(zone, scene, options):
+@app.route("/assign/<zone>", defaults={"scene" : None, "options" : None, "remote" : None})
+@app.route("/assign/<zone>/<remote>/<scene>", defaults={"options" : None})
+@app.route("/assign/<zone>/<remote>/<scene>/<options>")
+def api_assign(zone, remote, scene, options):
   """
   Options can be either clone or unassign:
     clone = Other zones will do the same thing
@@ -231,16 +231,16 @@ def api_assign(zone, scene, options):
     ret["active"] = config.getZoneScene(zone)
     ret["zone"] = zone
 
-    notifySubscribers(zone, {"type":"scene", "data": {"scene" : config.getZoneScene(zone) } })
+    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : config.getZoneScene(zone) } })
 
   ret = jsonify(ret)
   ret.status_code = 200
 
   return ret
 
-@app.route("/unassign", defaults={"zone" : None})
-@app.route("/unassign/<zone>")
-def api_unassign(zone):
+@app.route("/unassign", defaults={"zone" : None, "remote" : None})
+@app.route("/unassign/<zone>/<remote>")
+def api_unassign(zone, remote):
   """
   Removes any scenes assigned to a zone, also resets subzone back to
   the defined default.
@@ -252,7 +252,7 @@ def api_unassign(zone):
   else:
     config.clearZoneScene(zone)
     config.clearSubZone(zone)
-    notifySubscribers(zone, {"type":"scene", "data": {"scene" : None } })
+    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : None } })
 
   ret = jsonify(ret)
   ret.status_code = 200
