@@ -84,7 +84,7 @@ event_subscribers = []
 
 def notifySubscribers(zone, message):
   for subscriber in event_subscribers:
-    if config.getRemoteZone(subscriber.remoteId) == zone:
+    if zone is None or config.getRemoteZone(subscriber.remoteId) == zone:
       logging.info("Informing remote %s about \"%s\"", subscriber.remoteId, message)
       subscriber.write_message(message)
     else:
@@ -232,6 +232,7 @@ def api_assign(zone, remote, scene, options):
     ret["zone"] = zone
 
     notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : config.getZoneScene(zone) } })
+    notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : True}})
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -253,6 +254,7 @@ def api_unassign(zone, remote):
     config.clearZoneScene(zone)
     config.clearSubZone(zone)
     notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : None } })
+    notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : False}})
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -353,7 +355,17 @@ def api_debug():
   Handy endpoint which prints out current routing/state of the system,
   useful for debugging purposes.
   """
-  ret = config.getCurrentState()
+  ret = {
+    "routes" : config.getCurrentState(),
+    "remotes" : remotes.list(),
+    "subscribers" : [],
+    "config" : {
+      "scenes" : config.getSceneList(),
+      "zones" : config.getZoneList(),
+    }
+  }
+  for l in event_subscribers:
+    ret["subscribers"].append(l.remoteId)
 
   ret = jsonify(ret)
   ret.status_code = 200
