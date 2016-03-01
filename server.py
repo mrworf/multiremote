@@ -461,6 +461,10 @@ class WebSocket(WebSocketHandler):
       event_subscribers.append(self)
       self.remoteId = remoteId
 
+  # TODO: We don't care (for now) about origin
+  def check_origin(self, origin):
+    return True
+
   def on_message(self, message):
     logging.debug("Remote %s message: %s", self.remoteId, message)
 
