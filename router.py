@@ -114,12 +114,12 @@ class Router (threading.Thread):
         else:
           driver.setPower(zone, True)
       except:
-        logging.error("Driver %s failed to power on" % driver)
+        logging.exception("Driver %s failed to power on" % driver)
       try:
         for cmd in drivers[d]:
           driver.handleCommand(zone, cmd, None)
       except:
-        logging.error("Driver %s failed during initial command setup" % driver)
+        logging.exception("Driver %s failed during initial command setup" % driver)
 
   def disableDrivers(self, drivers):
     """Powers off drivers"""
