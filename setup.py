@@ -24,7 +24,9 @@ from driver_rxv1900 import DriverRXV1900
 from driver_spotify import DriverSpotify
 from driver_irplus  import DriverIRPlus
 from driver_plex    import DriverPlex
+from driver_restservice import DriverKeyinput
 from driver_roku    import DriverRoku
+
 from driver_basicir import DriverBasicIR
 from driver_null    import DriverNull
 
@@ -46,19 +48,18 @@ class SystemSetup:
   If you have most of hosted on one server, it's recommended to use
   a variable to make changes easier (see AV example).
   """
-  AV="http://raspberry.sfo.sensenet.nu"
+  AV="http://chip-ir.sfo.sensenet.nu"
 
 
   DRIVER_TABLE = {
-    "receiver"  : DriverRXV1900(AV + ":5000"),
+    "receiver"  : DriverRXV1900("http://chip-yamaha.sfo.sensenet.nu:5000"),
     "spotify"   : DriverSpotify(),
     "splitter"  : DriverBasicIR(AV + ":5001", "../ir-devices/accessories/sony-hdmiswitch.json"),
     "tv"        : DriverBasicIR(AV + ":5001", "../ir-devices/displays/lg-55la7400.json"),
-    "dvd"       : DriverIRPlus(AV + ":5001", "config/dvd.json"),
     "screen"    : DriverBasicIR(AV + ":5001", "../ir-devices/accessories/elite_screens-electric100h.json"),
     "projector" : DriverIRPlus(AV + ":5001", "config/projector.json"),
-    "plex"      : DriverPlex("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth1"),
-    "roku"      : DriverRoku("roku.sfo.sensenet.nu"),
+    "plex"      : DriverKeyinput("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth0"),
+    "roku"      : DriverRoku("roku-livingroom.sfo.sensenet.nu"),
     "null1"     : DriverNull(),
   }
 
@@ -119,12 +120,8 @@ class SystemSetup:
     2. Switch conflicting zone into same scene
   """
   ROUTING_TABLE = {
-    "spotify" : {
+    "chromecast" : {
       "audio" : [{"receiver"  : ["input-mdcdr"]}],
-    },
-
-    "null1" : {
-      "audio" : [{"receiver" : ["input-cd"]}],
     },
 
     "plex" : {
@@ -154,35 +151,40 @@ class SystemSetup:
 
     "ps4"     : {
       "audio+video" : [
-        {"receiver"  : ["input-cbl"],
-         "tv"        : ["input-hdmi1"],
-         "splitter"  : ["input-hdmi2"]},
-        {"receiver"  : ["input-cbl"],
+        {"receiver"  : ["input-bd"],
+         "tv"        : ["input-hdmi1"]},
+        {"receiver"  : ["input-bd"],
          "projector" : [],
-         "splitter"  : ["input-hdmi2"],
          "screen"    : []},
       ],
       "audio" : [
-        {"receiver"  : ["input-cbl"],
-         "splitter"  : ["input-hdmi2"]},
+        {"receiver"  : ["input-bd"]},
       ]
     },
 
-    "dvd"     : {
+    "ps3"     : {
+      "audio+video" : [
+        {"receiver"  : ["input-cd"],
+         "tv"        : ["input-hdmi2"]},
+      ],
+      "audio" : [
+        {"receiver"  : ["input-cd"]},
+      ]
+    },
+
+    "steamlink"     : {
       "audio+video" : [
         {"receiver"  : ["input-cbl"],
-         "tv"        : ["input-hdmi1"],
-         "splitter"  : ["input-hdmi3"]},
+         "tv"        : ["input-hdmi1"]},
         {"receiver"  : ["input-cbl"],
          "projector" : [],
-         "splitter"  : ["input-hdmi3"],
          "screen"    : []},
       ],
       "audio" : [
-        {"receiver"  : ["input-cbl"],
-         "splitter"  : ["input-hdmi3"]},
-      ],
-    }
+        {"receiver"  : ["input-cbl"]},
+      ]
+    },
+
   }
 
   """
@@ -214,33 +216,6 @@ class SystemSetup:
   """
 
   SCENE_TABLE = {
-    "spotify" : {
-      "driver"      : "spotify",
-      "name"        : "Spotify",
-      "description" : "Allows you to listen to music",
-      "audio"       : True,
-      "video"       : False,
-      "ux-hint"     : "android-app=com.spotify.music,category=music,icon=spotify",
-    },
-
-    "airplay" : {
-      "driver"      : "null1",
-      "name"        : "AirPlay",
-      "description" : 'Streams from "House Speakers"',
-      "audio"       : True,
-      "video"       : False,
-      "ux-hint"     : 'category=music,icon=airplay,message=Connect your iOS device to "House Speakers" to stream music to the speakers',
-    },
-
-    "dvd" : {
-      "driver"      : "dvd",
-      "name"        : "DVD Player",
-      "description" : "Region free DVD player",
-      "audio"       : True,
-      "video"       : True,
-      "ux-hint"     : "category=video,icon=dvd",
-    },
-
     "plex" : {
       "driver"      : "plex",
       "name"        : "Plex Media Center",
@@ -277,6 +252,33 @@ class SystemSetup:
       "audio"       : True,
       "video"       : True,
       "ux-hint"     : "category=gaming,icon=ps4",
+    },
+
+    "ps3" : {
+      "driver"      : "ps3",
+      "name"        : "Playstation 3",
+      "description" : "Play games",
+      "audio"       : True,
+      "video"       : True,
+      "ux-hint"     : "category=gaming,icon=ps3",
+    },
+
+    "steamlink" : {
+      "driver"      : "steamlink",
+      "name"        : "SteamLink",
+      "description" : "Play games",
+      "audio"       : True,
+      "video"       : True,
+      "ux-hint"     : "category=gaming,icon=steamlink",
+    },
+
+    "chromecast" : {
+      "driver"      : "chromecast",
+      "name"        : "Chromecast",
+      "description" : "Listen to music",
+      "audio"       : True,
+      "video"       : False,
+      "ux-hint"     : "category=music,icon=chromecast,apps=com.spotify.music:tunein.player:radiotime.player:com.pandora.android,message=Connect to \"HomeTheater\" to play here",
     },
   }
 
