@@ -75,6 +75,7 @@ class SSDPHandler (threading.Thread):
   def handleSearch(self, sender, content):
     for line in content:
       if line == "ST: ssdp:all" or line == ("ST: %s" % self.urn):
+        print repr(sender) + " is looking for me"
         self.handleNotify(sender)
         break
 
@@ -84,7 +85,7 @@ class SSDPHandler (threading.Thread):
       print "ERROR: SSDP source could not be resolved to interface"
       return
 
-    msg  = 'NOTIFY * HTTP/1.1\r\n'
+    msg  = 'HTTP/1.1 200 OK\r\n'
     msg += 'Host: 239.255.255.250:1900\r\n'
     msg += 'Location: %s\r\n' % (self.location % host)
     msg += 'Server: multiRemote/1.0\r\n'
@@ -94,7 +95,7 @@ class SSDPHandler (threading.Thread):
     msg += 'Cache-Control: max-age=120\r\n'
     msg += '\r\n'
 
-    self.sender.sendto(msg, ('239.255.255.250', 1900))
+    self.sender.sendto(msg, sender)
 
 if __name__ == "__main__":
   ssdp = SSDPHandler('http://%s:5000/desc')
