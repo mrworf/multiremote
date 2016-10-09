@@ -22,13 +22,6 @@ Creates a simple UDP server which listens for the following services:
 
 If it sees any M-SEARCH for them, it responds in kind.
 
-It has a nice special feature which allows it to detect the originating
-network interface and, if provided with a %s in the location parameter,
-automatically substitute the server address with the IP of the network
-interface. Solves the case where you bind to 0.0.0.0 (ADDR_ANY).
-
-For testing purposes, this class can be run stand-alone and will then
-start the SSDP server by itself, allowing easy debugging.
 """
 import socket
 import threading
@@ -36,15 +29,68 @@ import time
 import struct
 import ipaddress
 import netifaces
+import uuid
+import logging
+import json
+import os.path
 
 class SSDPHandler (threading.Thread):
-  def __init__(self, location, unique='changemetounique', listen=''):
+  CONFIGFILE = "ssdp-info.json"
+
+  """
+  location should be an URL where the web interface is hosted.
+
+  notifyInterval is the number of seconds between NOTIFY messages (default 15s)
+
+  listen can be used to override which interface to issue and listen to SSDP messages.
+  By default this is set to empty string which means all available interfaces.
+
+  """
+  def __init__(self, location, notifyInterval=15, listen=''):
     threading.Thread.__init__(self)
     self.daemon = True
     self.listen = listen
     self.location = location
+    self.notifyInterval = notifyInterval
     self.urn = 'urn:sensenet-nu:service:multiRemote:1'
-    self.usn = 'uuid:%s' % unique
+    self.usn = None
+
+    self.load()
+    if self.usn is None:
+      self.usn = 'uuid:%s' % uuid.uuid4()
+      self.save()
+
+  def load(self):
+    if not os.path.isfile(self.CONFIGFILE):
+      return
+
+    try:
+      jdata = open(self.CONFIGFILE)
+      data = json.load(jdata)
+      jdata.close()
+      if "usn" in data:
+        self.usn = data["usn"]
+    except:
+      logging.exception("Unable to load " + self.CONFIGFILE)
+
+  def save(self):
+    data = {
+      "usn" : self.usn,
+    }
+
+    try:
+      jdata = open(self.CONFIGFILE, "w")
+      jdata.write(json.dumps(data))
+      jdata.close()
+    except:
+      logging.exception("Unable to save " + self.CONFIGFILE)
+      return
+
+  def getUSN(self):
+    return self.usn
+
+  def getURN(self):
+    return self.urn
 
   def run(self):
     self.sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -58,12 +104,21 @@ class SSDPHandler (threading.Thread):
     request = struct.pack('4sL', socket.inet_aton('239.255.255.250'), socket.INADDR_ANY)
     self.listener.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
 
-    print "Loop begins..."
+    # Make sure we don't get stuck longer than 1s so we also can notify
+    self.listener.settimeout(1)
+
+    nextNotify = 0
     while True:
-      data, sender = self.listener.recvfrom(1024)
-      data = data.split('\r\n')
-      if data[0] == 'M-SEARCH * HTTP/1.1':
-        self.handleSearch(sender, data)
+      if nextNotify < time.time():
+        self.sendNotify()
+        nextNotify = time.time() + self.notifyInterval
+      try:
+        data, sender = self.listener.recvfrom(1024)
+        data = data.split('\r\n')
+        if data[0] == 'M-SEARCH * HTTP/1.1':
+          self.handleSearch(sender, data)
+      except:
+        pass
 
   def resolveHost(self, sender):
     for i in netifaces.interfaces():
@@ -75,11 +130,23 @@ class SSDPHandler (threading.Thread):
   def handleSearch(self, sender, content):
     for line in content:
       if line == "ST: ssdp:all" or line == ("ST: %s" % self.urn):
-        print repr(sender) + " is looking for me"
-        self.handleNotify(sender)
+        self.sendResponse(sender)
         break
 
-  def handleNotify(self, sender):
+  def sendNotify(self):
+    msg  = 'NOTIFY * HTTP/1.1\r\n'
+    msg += 'Host: 239.255.255.250:1900\r\n'
+    msg += 'Location: *\r\n'
+    msg += 'Server: multiRemote/1.0\r\n'
+    msg += 'NT: %s\r\n' % self.urn
+    msg += 'NTS: ssdp:alive\r\n'
+    msg += 'USN: %s\r\n' % self.usn
+    msg += 'Cache-Control: max-age=120\r\n'
+    msg += '\r\n'
+
+    self.sender.sendto(msg, ('239.255.255.250', 1900))
+
+  def sendResponse(self, sender):
     host = self.resolveHost(sender[0])
     if host is None:
       print "ERROR: SSDP source could not be resolved to interface"
@@ -87,7 +154,7 @@ class SSDPHandler (threading.Thread):
 
     msg  = 'HTTP/1.1 200 OK\r\n'
     msg += 'Host: 239.255.255.250:1900\r\n'
-    msg += 'Location: %s\r\n' % (self.location % host)
+    msg += 'Location: http://%s:5000/description.xml\r\n' % host
     msg += 'Server: multiRemote/1.0\r\n'
     msg += 'NT: %s\r\n' % self.urn
     msg += 'NTS: ssdp:alive\r\n'
@@ -97,9 +164,33 @@ class SSDPHandler (threading.Thread):
 
     self.sender.sendto(msg, sender)
 
-if __name__ == "__main__":
-  ssdp = SSDPHandler('http://%s:5000/desc')
-  print "Starting the SSDP thread"
-  ssdp.start()
-  while True:
-    time.sleep(1)
+  def generateXML(self):
+    result = """<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+   <specVersion>
+      <major>1</major>
+      <minor>1</minor>
+   </specVersion>
+   <device>
+      <deviceType>{urn}</deviceType>
+      <friendlyName>multiRemote</friendlyName>
+      <manufacturer>Sense/Net</manufacturer>
+      <manufacturerURL>http://multiremote.sensenet.nu</manufacturerURL>
+      <modelDescription>Advanced A/V remote control server</modelDescription>
+      <modelName>multiRemote</modelName>
+      <modelNumber>1</modelNumber>
+      <UDN>{usn}</UDN>
+      <serviceList>
+         <service>
+            <!-- Sorry, not 100% compliant -->
+            <serviceType>{urn}</serviceType>
+            <serviceId>urn:sensenet-nu:serviceId:control</serviceId>
+            <SCPDURL></SCPDURL>
+            <controlURL>/</controlURL>
+            <eventSubURL>/events</eventSubURL>
+         </service>
+      </serviceList>
+      <presentationURL>{interface}</presentationURL>
+   </device>
+</root>""".format(urn=self.urn, usn=self.usn, interface=self.location)
+    return result

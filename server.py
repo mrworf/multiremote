@@ -48,7 +48,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import Application, FallbackHandler
 from tornado.websocket import WebSocketHandler
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response
 import threading
 import Queue
 import time
@@ -56,6 +56,7 @@ import time
 from remotemgr import RemoteManager
 from router import Router
 from config import Config
+from ssdp import SSDPHandler
 
 try:
   from flask.ext.cors import CORS # The typical way to import flask-cors
@@ -78,6 +79,7 @@ cors = CORS(app) # Needed to make us CORS compatible
 remotes = RemoteManager()
 config  = Config(remotes)
 router  = Router(config)
+ssdp    = SSDPHandler("http://magi.sfo.sensenet.nu/multiremote-ux/")
 
 """ Tracking information """
 event_subscribers = []
@@ -451,6 +453,10 @@ def api_remotes(uuid):
   ret.status_code = 200
   return ret
 
+@app.route("/description.xml")
+def api_ssdp():
+  return Response(ssdp.generateXML(), mimetype='text/xml')
+
 class WebSocket(WebSocketHandler):
   def open(self, remoteId):
     logging.info("Remote %s has connected", remoteId);
@@ -482,4 +488,5 @@ if __name__ == "__main__":
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
   server.listen(5000)
+  ssdp.start()
   IOLoop.instance().start()
