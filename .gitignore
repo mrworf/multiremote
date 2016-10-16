@@ -1,4 +1,5 @@
 remotes.json
+ssdp-info.json
 
 html/dependencies/*
 !html/dependencies/README
