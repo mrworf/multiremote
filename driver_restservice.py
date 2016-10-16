@@ -44,7 +44,8 @@ class DriverKeyinput(DriverNull):
     self.addCommand("enter",  CommandType.NAVIGATE_ENTER,   self.navEnter)
     self.addCommand("back",   CommandType.NAVIGATE_BACK,    self.navBack)
 
-    self.addCommand("playpause",   CommandType.PLAYBACK_PLAYPAUSE,    self.playbackPlayPause)
+    self.addCommand("play",   CommandType.PLAYBACK_PLAY,    self.playbackPlay)
+    self.addCommand("pause",   CommandType.PLAYBACK_PAUSE,    self.playbackPause)
     self.addCommand("stop",   CommandType.PLAYBACK_STOP,    self.playbackStop)
 
     self.addCommand("+30s",   CommandType.PLAYBACK_SKIP_FORWARD,   self.playbackForward)
@@ -64,7 +65,7 @@ class DriverKeyinput(DriverNull):
 
   def eventOff(self):
     # Stop and navigate home (avoid leaving it playing)
-    self.execServer(["ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE","+LSHIFT","+LCONTROL","VK_R","-LCONTROL","-LSHIFT"])
+    self.execServer(["ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE","ESCAPE"])
     self.execPower()
 
   def navUp(self, zone):
@@ -85,8 +86,11 @@ class DriverKeyinput(DriverNull):
   def navBack(self, zone):
     self.execServer(["ESCAPE"])
 
-  def playbackPlayPause(self, zone):
+  def playbackPlay(self, zone):
     self.execServer(["MEDIA_PLAY_PAUSE"])
+
+  def playbackPause(self, zone):
+    self.execServer(["+LCONTROL", "VK_P", "-LCONTROL"])
 
   def playbackStop(self, zone):
     self.execServer(["MEDIA_STOP"])
