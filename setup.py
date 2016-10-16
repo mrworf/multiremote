@@ -36,9 +36,13 @@ class SystemSetup:
   """
   PIN_REMOTE defines a PIN (actually, could be any combination of letters and numbers)
   that must be provided to register new remotes.
+
+  UX-SERVER defines where the clients can download the HTML5 content to run the UX.
+  If not defined, defaults to hosting from the controller itself.
   """
   OPTIONS = {
     "pin-remote" : "1234",
+    "ux-server" : "http://magi.sfo.sensenet.nu/multiremote-ux/",
   }
 
   """
