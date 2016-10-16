@@ -1,10 +1,13 @@
 {
   "file" : "../ir-devices/displays/jvc-rs1.json",
   "commands" : {
-    "on" : { "type" : 901 },
+    "on" : { 
+      "type" : 901,
+      "cooldown" : 30000
+    },
     "off" : {
       "type" : 902,
-      "sequence" : "off,50,off,50,off"
+      "sequence" : "off,150,off,150,off"
     }
   }
 }

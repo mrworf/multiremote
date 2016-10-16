@@ -27,9 +27,19 @@ JSON config file looks like this:
       "name" : "<readable name>", (optional)
       "description" : "<readable description>" (optional)
       "sequence" : "[<ircmd>|<ms>]..." (optional)
+      "cooldown" : <delay in ms> (optional)
     }
   }
 }
+
+commandfile = Which IR file to get ir commands from
+command = the exposed command
+type = Maps to a command type so UX knows what to do with it
+name = A humanreadble name
+description = A humanreadble description
+sequence = A list of ir commands and delays (in ms)
+cooldown = When this command is executed, no new commands can be executed until this time has expired (milliseconds)
+           This is useful for devices which do not accept new inputs until a certain time has passed (like power on)
 
 If you omit the optional items, they get the command name as name/desc/sequence.
 Any sequence item which is all numbers is considered to be a delay of X milliseconds.
@@ -71,6 +81,9 @@ class DriverIRPlus(DriverNull):
     self.cmd_on = None
     self.cmd_off = None
 
+    self.cooldown = 0
+    self.cmdfile = commandfile
+
     jdata = open(commandfile)
     data = json.load(jdata)
 
@@ -97,6 +110,9 @@ class DriverIRPlus(DriverNull):
       if data["commands"][cmd]["type"] == 902:
         self.cmd_off = cmd
 
+  def getTime(self):
+   return int(round(time.time() * 1000))
+
   def setPower(self, enable):
     """
     We need to override this and use the on/off pair or toggle to handle
@@ -113,8 +129,16 @@ class DriverIRPlus(DriverNull):
     self.power = enable
     return True
 
-  def sendCommand(self, zone, command):
+  def sendCommand(self, zone, command, extras=None):
     logging.debug("Sending command: " + repr(command))
+    logging.debug("Extras is: " + repr(extras))
+
+    cool = self.cooldown - self.getTime()
+    if cool > 0:
+      logging.info("Cooldown needed before executing new commands, delaying %d ms", cool)
+      time.sleep(cool / 1000.0)
+      logging.info("Cooldown complete, continuing")
+
     seq = command.split(",")
     for cmd in seq:
       if cmd.isdigit():
@@ -123,6 +147,9 @@ class DriverIRPlus(DriverNull):
       else:
         logging.debug("Command sequence: Sending %s" % cmd)
         self.sendIr(cmd)
+    if extras is not None and "cooldown" in extras:
+      logging.info("This command requires a cooldown of %d ms", extras["cooldown"])
+      self.cooldown = self.getTime() + extras["cooldown"]
 
   def sendIr(self, command):
     if not command in self.ircmds:
@@ -142,3 +169,6 @@ class DriverIRPlus(DriverNull):
       return False
 
     j = r.json()
+
+  def __str__(self):
+    return "IRPlus(" + self.cmdfile + ")"
