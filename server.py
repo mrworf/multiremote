@@ -79,7 +79,7 @@ cors = CORS(app) # Needed to make us CORS compatible
 """ Create the various cogs of the machinery """
 parser   = SetupParser()
 setup = {}
-if not parser.load("setup.conf", setup):
+if not parser.load("conf/setup.conf", setup):
   logging.error('Failed to load "setup.conf"')
   sys.exit(255)
 
