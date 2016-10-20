@@ -17,16 +17,16 @@
 Base IR driver, most of the time, this is what you need.
 """
 
-from driver_null import DriverNull
+from null import driverNull
 import requests
 import base64
 import json
 from commandtype import CommandType
 import logging
 
-class DriverBasicIR(DriverNull):
+class driverBasicir(driverNull):
   def __init__(self, server, commandfile):
-    DriverNull.__init__(self)
+    driverNull.__init__(self)
 
     self.code_on = "on"
     self.code_off = "off"

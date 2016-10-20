@@ -1,31 +1,31 @@
 # This file is part of multiRemote.
-# 
+#
 # multiRemote is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # multiRemote is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with multiRemote.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 """
-Simplest driver of all, provides logic for power handling, commands and 
+Simplest driver of all, provides logic for power handling, commands and
 simplifications for some of the more nitty-gritty work that all drivers must
 do.
 
-It's HIGHLY RECOMMENDED that drivers utilize this class as the base class, 
+It's HIGHLY RECOMMENDED that drivers utilize this class as the base class,
 since it provides quite a bit of abstraction and easier power management.
 """
 from commandtype import CommandType
 import traceback
 import logging
 
-class DriverNull:
+class driverNull:
   def __init__(self):
     self.power = False
     self.COMMAND_HANDLER = {}
@@ -65,7 +65,7 @@ class DriverNull:
         By default, this parses a string that looks like this:
           key=value,key=value,...
         And calls eventExtras() with a dict, but drivers can override this
-        directly if needed. Otherwise, eventExtras is the recommended override 
+        directly if needed. Otherwise, eventExtras is the recommended override
         method.
     """
     result = {}
@@ -101,7 +101,7 @@ class DriverNull:
     if command not in self.COMMAND_HANDLER:
       logging.error("%s is not a supported command" % command)
       return result
-    
+
     try:
       item = self.COMMAND_HANDLER[command]
       if item["arguments"] == 0:
@@ -136,7 +136,7 @@ class DriverNull:
       if "description" in self.COMMAND_HANDLER[c]:
         ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
-    return ret  
+    return ret
 
   def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None, args = 0):
     """ Convenience function, allows adding commands to the list which
@@ -148,7 +148,7 @@ class DriverNull:
       desc = name
     if extras == None:
       self.COMMAND_HANDLER[command] = {
-        "arguments"   : args, 
+        "arguments"   : args,
         "handler"     : handler,
         "name"        : name,
         "description" : desc,
@@ -156,7 +156,7 @@ class DriverNull:
       }
     else:
       self.COMMAND_HANDLER[command] = {
-        "arguments"   : args, 
+        "arguments"   : args,
         "handler"     : handler,
         "name"        : name,
         "description" : desc,

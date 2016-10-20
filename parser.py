@@ -1,6 +1,8 @@
 import re
+import importlib
+import logging
 
-class setupParser:
+class SetupParser:
   def __init__(self):
     pass
 
@@ -47,14 +49,17 @@ class setupParser:
     elif value == 'uses-noargs':
       config['DRIVER_TABLE'][temp['device']['name']] = {m[0].lower() : []}
     elif value == 'uses-args':
-      config['DRIVER_TABLE'][temp['device']['name']] = {m[0].lower() : m[1].split(',')}
+      config['DRIVER_TABLE'][temp['device']['name']] = {m[0].lower() : self.parseStringArguments(m[1])}
     elif value == 'zones': # Not used for now
       pass
     elif value == 'path':
       dev = temp['device']['name']
       if dev not in config['ROUTING_TABLE']:
         config['ROUTING_TABLE'][dev] = {}
-      config['ROUTING_TABLE'][dev][m[0]] = self.parsePathArguments(m[1])
+      if m[0] not in config['ROUTING_TABLE'][dev]:
+        config['ROUTING_TABLE'][dev][m[0]] = [self.parsePathArguments(m[1])]
+      else:
+        config['ROUTING_TABLE'][dev][m[0]].append(self.parsePathArguments(m[1]))
     else:
       return False
     return True
@@ -160,14 +165,27 @@ class setupParser:
     return True
 
   def parsePathArguments(self, args):
-    result = []
+    result = {}
     p = re.compile('''([a-zA-Z0-9]+) *(?:\(([a-zA-Z0-9,\- ]+)\)|()),?''')
     m = p.findall(args)
     for n in m:
       tmp = re.split(' *, *', n[1].strip())
       if tmp[0] == "":
         tmp = []
-      result.append({n[0] : tmp })
+      result[n[0]] = tmp
+    return result
+
+  def parseStringArguments(self, args):
+    result = []
+    p = re.compile('''(?:"([^"]+)"|'([^']+)'|([^,]+)),? ?''')
+    m = p.findall(args)
+    for n in m:
+      if n[0] != '':
+        result.append(n[0])
+      elif n[1] != '':
+        result.append(n[1])
+      elif n[2] != '':
+        result.append(n[2])
     return result
 
   def findHandler(self, line, handlers):
@@ -207,7 +225,8 @@ class setupParser:
     valid, err = self.validateKeys(config, ['OPTIONS', 'DRIVER_TABLE', 'ROUTING_TABLE', 'SCENE_TABLE', 'ZONE_TABLE'])
     if not valid: return err
 
-    valid, err = self.validateKeys(config['OPTIONS'], ['pin-remote'], ['ux-server'])
+    if 'ux-server' not in config['OPTIONS']: config['OPTIONS']['ux-server'] = ""
+    valid, err = self.validateKeys(config['OPTIONS'], ['pin-remote', 'ux-server'])
     if not valid: return 'Section "options", ' + err
 
     if len(config['DRIVER_TABLE']) == 0: return 'No devices defined'
@@ -252,6 +271,7 @@ class setupParser:
         return "Scene %s references unknown device %s" % (scene, dev)
 
     for zone in config['ZONE_TABLE']:
+      if 'ux-hint' not in config['ZONE_TABLE'][zone]: config['ZONE_TABLE'][zone]['ux-hint'] = ''
       if 'subzones' in config['ZONE_TABLE'][zone]:
         for subzone in config['ZONE_TABLE'][zone]['subzones']:
           if 'audio' not in config['ZONE_TABLE'][zone]['subzones'][subzone]: config['ZONE_TABLE'][zone]['subzones'][subzone]['audio'] = None
@@ -277,7 +297,6 @@ class setupParser:
       else:
         if 'audio' not in config['ZONE_TABLE'][zone]: config['ZONE_TABLE'][zone]['audio'] = None
         if 'video' not in config['ZONE_TABLE'][zone]: config['ZONE_TABLE'][zone]['video'] = None
-        if 'ux-hint' not in config['ZONE_TABLE'][zone]: config['ZONE_TABLE'][zone]['ux-hint'] = ''
         valid, err = self.validateKeys(config['ZONE_TABLE'][zone], ['name', 'audio', 'video', 'ux-hint'])
         if not valid:
           return 'Zone %s, %s' % (zone, err)
@@ -311,6 +330,17 @@ class setupParser:
         info.append("%s has path only, does not allow control" % driver)
 
     return {'warn' : warn, 'info' : info}
+
+  def instanciate(self, klass, arglist):
+    module = importlib.import_module('drivers.' + klass)
+    my_class = getattr(module, 'driver' + klass.capitalize())
+
+    args = ''
+    for a in arglist:
+      args += '"""%s""", ' % a
+    args = args[:-2]
+
+    return eval('my_class(%s)' % args)
 
   def load(self, filename, config):
     handler = None
@@ -362,7 +392,18 @@ class setupParser:
       return False
 
     for w in warn:
-      print "WARNING: " + w
+      logging.warn(w)
     for i in info:
-      print "INFO: " + i
+      logging.info(i)
+
+    # Lets instanciate the drivers now that we know we're good to go!
+    for item in config['DRIVER_TABLE']:
+      for k in config['DRIVER_TABLE'][item]:
+        driver = k
+        arguments = config['DRIVER_TABLE'][item][k]
+
+        logging.debug("Loading " + driver)
+        config['DRIVER_TABLE'][item] = self.instanciate(driver, arguments)
+        break
+
     return True

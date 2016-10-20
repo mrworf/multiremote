@@ -20,19 +20,24 @@ config.py class which uses this data as it sees fit.
 Eventually this file can be generated from a web-ui, but for now you need to
 know your python. Sorry :-(
 """
-from driver_rxv1900 import DriverRXV1900
-from driver_spotify import DriverSpotify
-from driver_irplus  import DriverIRPlus
-from driver_plex    import DriverPlex
-from driver_restservice import DriverKeyinput
-from driver_roku    import DriverRoku
+from drivers.rxv1900   import driverRxv1900
+from drivers.spotify   import driverSpotify
+from drivers.irplus    import driverIrplus
+from drivers.plex      import driverPlex
+from drivers.keyinput  import driverKeyinput
+from drivers.roku      import driverRoku
 
-from driver_basicir import DriverBasicIR
-from driver_null    import DriverNull
+from drivers.basicir   import driverBasicir
+from drivers.null      import driverNull
+
+from parser import setupParser
 
 from commandtype import CommandType
 
-class SystemSetup:
+import re
+import json
+
+class SystemSetup_DEAD:
   """
   PIN_REMOTE defines a PIN (actually, could be any combination of letters and numbers)
   that must be provided to register new remotes.
@@ -43,6 +48,8 @@ class SystemSetup:
   OPTIONS = {
     "pin-remote" : "1234",
     "ux-server" : "http://magi.sfo.sensenet.nu/multiremote-ux/",
+    "data-persist" : "persist/",
+    "data-config" : "config/",
   }
 
   """
@@ -56,15 +63,15 @@ class SystemSetup:
 
 
   DRIVER_TABLE = {
-    "receiver"  : DriverRXV1900("http://chip-yamaha.sfo.sensenet.nu:5000"),
-    "spotify"   : DriverSpotify(),
-    "splitter"  : DriverBasicIR(AV + ":5001", "../ir-devices/accessories/sony-hdmiswitch.json"),
-    "tv"        : DriverBasicIR(AV + ":5001", "../ir-devices/displays/lg-55la7400.json"),
-    "screen"    : DriverBasicIR(AV + ":5001", "../ir-devices/accessories/elite_screens-electric100h.json"),
-    "projector" : DriverIRPlus(AV + ":5001", "config/projector.json"),
-    "plex"      : DriverKeyinput("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth0"),
-    "roku"      : DriverRoku("roku-livingroom.sfo.sensenet.nu"),
-    "null1"     : DriverNull(),
+    "receiver"  : driverRxv1900("http://chip-yamaha.sfo.sensenet.nu:5000"),
+    "spotify"   : driverSpotify(),
+    "splitter"  : driverBasicir(AV + ":5001", "../ir-devices/accessories/sony-hdmiswitch.json"),
+    "tv"        : driverBasicir(AV + ":5001", "../ir-devices/displays/lg-55la7400.json"),
+    "screen"    : driverBasicir(AV + ":5001", "../ir-devices/accessories/elite_screens-electric100h.json"),
+    "projector" : driverIrplus(AV + ":5001", "config/projector.json"),
+    "plex"      : driverKeyinput("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth0"),
+    "roku"      : driverRoku("roku-livingroom.sfo.sensenet.nu"),
+    "null1"     : driverNull(),
   }
 
   """
@@ -357,3 +364,13 @@ class SystemSetup:
       "ux-hint" : "",
     }
   }
+
+
+
+if __name__ == "__main__":
+  # Let's see if we can parse the config
+  setup2 = {}
+  parser = setupParser()
+  parser.load("setup.conf", setup2)
+  #print json.dumps(setup2["ROUTING_TABLE"], indent=2)
+  print repr(setup2["DRIVER_TABLE"])

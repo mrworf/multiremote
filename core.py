@@ -22,27 +22,27 @@ should it be possible.
 Also able to reply back regarding state of various parts of the system
 """
 from commandtype import CommandType
-from setup import SystemSetup
 import logging
 
-class Config:
+class Core:
+  """
   DRIVER_TABLE = None
   ROUTING_TABLE = None
   SCENE_TABLE = None
   ZONE_TABLE = None
+  """
 
-  def __init__(self, remotemgr):
+  def __init__(self, setup, remotemgr):
     """
     At this point, initialize some extra parameters, such as the combined
     capabilties of zones which have sub-zones.
     """
     # Load data
-    setup = SystemSetup()
-    self.DRIVER_TABLE   = setup.DRIVER_TABLE
-    self.ROUTING_TABLE  = setup.ROUTING_TABLE
-    self.SCENE_TABLE    = setup.SCENE_TABLE
-    self.ZONE_TABLE     = setup.ZONE_TABLE
-    self.OPTIONS        = setup.OPTIONS
+    self.DRIVER_TABLE   = setup['DRIVER_TABLE']
+    self.ROUTING_TABLE  = setup['ROUTING_TABLE']
+    self.SCENE_TABLE    = setup['SCENE_TABLE']
+    self.ZONE_TABLE     = setup['ZONE_TABLE']
+    self.OPTIONS        = setup['OPTIONS']
     self.REMOTEMGR      = remotemgr
 
     # Validate zone structure and provide good defaults

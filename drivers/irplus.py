@@ -65,7 +65,7 @@ sequence. If you miss either or both, the power manegement will not happen.
 
 """
 
-from driver_null import DriverNull
+from null import driverNull
 import requests
 import base64
 import json
@@ -73,9 +73,9 @@ import time
 from commandtype import CommandType
 import logging
 
-class DriverIRPlus(DriverNull):
+class driverIrplus(driverNull):
   def __init__(self, server, commandfile):
-    DriverNull.__init__(self)
+    driverNull.__init__(self)
 
     self.server = server
     self.cmd_on = None

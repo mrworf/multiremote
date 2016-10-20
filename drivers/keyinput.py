@@ -17,11 +17,9 @@
 Plex Home Theater driver
 Talks to a specified Plex Home Theater client over network and uses
 Wake-On-Lan to wake it from sleep.
-
-Note! Currently no way of placing PHT back to sleep after usage.
 """
 
-from driver_null import DriverNull
+from null import driverNull
 import requests
 import base64
 import json
@@ -29,9 +27,9 @@ from commandtype import CommandType
 import subprocess
 import logging
 
-class DriverKeyinput(DriverNull):
+class driverKeyinput(driverNull):
   def __init__(self, server, macaddress = None, iface = "eth0"):
-    DriverNull.__init__(self)
+    driverNull.__init__(self)
 
     self.server = "http://" + server + ":5000"
     self.mac = macaddress

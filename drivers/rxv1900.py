@@ -20,7 +20,7 @@ import requests
 from commandtype import CommandType
 import logging
 
-class DriverRXV1900:
+class driverRxv1900:
   cfg_YamahaController = None
 
   # Will be filled out by init

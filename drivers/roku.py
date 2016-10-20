@@ -37,15 +37,15 @@ This will cause the driver to automatically start the correct app
 when user activates the scene.
 """
 
-from driver_null import DriverNull
+from null import driverNull
 import requests
 from xml.etree import ElementTree
 from commandtype import CommandType
 import logging
 
-class DriverRoku(DriverNull):
+class driverRoku(driverNull):
   def __init__(self, server):
-    DriverNull.__init__(self)
+    driverNull.__init__(self)
 
     self.server = "http://" + server + ":8060/"
     self.home = None

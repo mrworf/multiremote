@@ -55,8 +55,9 @@ import time
 
 from remotemgr import RemoteManager
 from router import Router
-from config import Config
+from core import Core
 from ssdp import SSDPHandler
+from parser import SetupParser
 
 try:
   from flask.ext.cors import CORS # The typical way to import flask-cors
@@ -76,17 +77,23 @@ app = Flask(__name__)
 cors = CORS(app) # Needed to make us CORS compatible
 
 """ Create the various cogs of the machinery """
+parser   = SetupParser()
+setup = {}
+if not parser.load("setup.conf", setup):
+  logging.error('Failed to load "setup.conf"')
+  sys.exit(255)
+
 remotes = RemoteManager()
-config  = Config(remotes)
-router  = Router(config)
-ssdp    = SSDPHandler("http://magi.sfo.sensenet.nu/multiremote-ux/")
+core    = Core(setup, remotes)
+router  = Router(core)
+ssdp    = SSDPHandler(setup['OPTIONS']["ux-server"])
 
 """ Tracking information """
 event_subscribers = []
 
 def notifySubscribers(zone, message):
   for subscriber in event_subscribers:
-    if zone is None or config.getRemoteZone(subscriber.remoteId) == zone:
+    if zone is None or core.getRemoteZone(subscriber.remoteId) == zone:
       logging.info("Informing remote %s about \"%s\"", subscriber.remoteId, message)
       subscriber.write_message(message)
     else:
@@ -109,8 +116,8 @@ def api_scene(scene):
   ret = {}
 
   if scene is None:
-    scenes = config.getSceneList(None)
-  elif not config.hasScene(scene):
+    scenes = core.getSceneList(None)
+  elif not core.hasScene(scene):
     ret["error"] = "No such scene"
     scenes = None
   else:
@@ -120,11 +127,11 @@ def api_scene(scene):
     for scene in scenes:
       ret[scene] = {
         "scene"       : scene,
-        "name"        : config.getScene(scene)["name"],
-        "description" : config.getScene(scene)["description"],
-        "ux-hint"     : config.getScene(scene)["ux-hint"],
-        "zones"       : config.getSceneZoneUsage(scene),
-        "remotes"     : config.getSceneRemoteUsage(scene),
+        "name"        : core.getScene(scene)["name"],
+        "description" : core.getScene(scene)["description"],
+        "ux-hint"     : core.getScene(scene)["ux-hint"],
+        "zones"       : core.getSceneZoneUsage(scene),
+        "remotes"     : core.getSceneRemoteUsage(scene),
       }
     if len(scenes) == 1:
       ret = ret[scenes[0]]
@@ -142,8 +149,8 @@ def api_zone(zone):
   ret = {}
 
   if zone is None:
-    zones = config.getZoneList();
-  elif not config.hasZone(zone):
+    zones = core.getZoneList();
+  elif not core.hasZone(zone):
     ret["error"] = "No such zone"
     zones = None
   else:
@@ -153,16 +160,16 @@ def api_zone(zone):
     for zone in zones:
       ret[zone] = {
         "zone"        : zone,
-        "name"        : config.getZone(zone)["name"],
-        "scene"       : config.getZoneScene(zone),
-        "remotes"     : config.getZoneRemoteList(zone),
-        "ux-hint"     : config.getZone(zone)["ux-hint"],
-        "compatible"  : config.getSceneListForZone(zone),
+        "name"        : core.getZone(zone)["name"],
+        "scene"       : core.getZoneScene(zone),
+        "remotes"     : core.getZoneRemoteList(zone),
+        "ux-hint"     : core.getZone(zone)["ux-hint"],
+        "compatible"  : core.getSceneListForZone(zone),
       }
-      if config.hasSubZones(zone):
-        ret[zone]["subzones"] = config.getSubZoneList(zone)
-        ret[zone]["subzone"] = config.getSubZone(zone)
-        ret[zone]["subzone-default"] = config.getSubZoneDefault(zone)
+      if core.hasSubZones(zone):
+        ret[zone]["subzones"] = core.getSubZoneList(zone)
+        ret[zone]["subzone"] = core.getSubZone(zone)
+        ret[zone]["subzone-default"] = core.getSubZoneDefault(zone)
     if len(zones) == 1:
       ret = ret[zones[0]]
   ret = jsonify(ret)
@@ -176,19 +183,19 @@ def api_subzone(zone, subzone):
   Changes the subzone for a specific zone
   """
   ret = {}
-  if not config.hasSubZones(zone):
+  if not core.hasSubZones(zone):
     ret["error"] = "Zone does not have subzones"
   elif subzone is None:
-    ret["subzones"] = config.getSubZoneList(zone)
-  elif not config.hasSubZone(zone, subzone):
+    ret["subzones"] = core.getSubZoneList(zone)
+  elif not core.hasSubZone(zone, subzone):
     ret["error"] = "Zone does not have specified subzone"
   else:
-    config.setSubZone(zone, subzone)
+    core.setSubZone(zone, subzone)
     router.updateRoutes()
-    ret["subzone"] = config.getSubZone(zone)
+    ret["subzone"] = core.getSubZone(zone)
 
-  if config.hasSubZones(zone):
-    ret["active-subzone"] = config.getSubZone(zone)
+  if core.hasSubZones(zone):
+    ret["active-subzone"] = core.getSubZone(zone)
   ret["zone"] = zone
   ret = jsonify(ret)
   ret.status_code = 200
@@ -208,32 +215,32 @@ def api_assign(zone, remote, scene, options):
   ret = {}
 
   if zone == None:
-    ret["zones"] = config.getZoneList()
+    ret["zones"] = core.getZoneList()
   else:
     if scene == None:
-      ret["scenes"] = config.getSceneListForZone(zone)
+      ret["scenes"] = core.getSceneListForZone(zone)
     else:
-      conflict = config.checkConflict(zone, scene)
+      conflict = core.checkConflict(zone, scene)
       if conflict is None:
-        config.setZoneScene(zone, scene)
+        core.setZoneScene(zone, scene)
         router.updateRoutes()
       else:
         if options is None:
           ret["conflict"] = conflict
         elif options == "unassign":
           for z in conflict:
-            config.clearZoneScene(z)
-          config.setZoneScene(zone, scene)
+            core.clearZoneScene(z)
+          core.setZoneScene(zone, scene)
           router.updateRoutes()
         elif options == "clone":
           for z in conflict:
-            config.setZoneScene(z, scene)
-          config.setZoneScene(zone, scene)
+            core.setZoneScene(z, scene)
+          core.setZoneScene(zone, scene)
           router.updateRoutes()
-    ret["active"] = config.getZoneScene(zone)
+    ret["active"] = core.getZoneScene(zone)
     ret["zone"] = zone
 
-    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : config.getZoneScene(zone) } })
+    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : core.getZoneScene(zone) } })
     notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : True}})
 
   ret = jsonify(ret)
@@ -251,10 +258,10 @@ def api_unassign(zone, remote):
   ret = {}
 
   if zone == None:
-    ret["zones"] = config.getZoneList()
+    ret["zones"] = core.getZoneList()
   else:
-    config.clearZoneScene(zone)
-    config.clearSubZone(zone)
+    core.clearZoneScene(zone)
+    core.clearSubZone(zone)
     notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : None } })
     notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : False}})
 
@@ -276,16 +283,16 @@ def api_attach(remote, zone, options):
 
   if remote is None:
     r = []
-    for z in config.getZoneList():
-      i = config.getZoneRemoteList(z)
+    for z in core.getZoneList():
+      i = core.getZoneRemoteList(z)
       r.extend(i)
     ret["active"] = r
   else:
     if remotes.has(remote):
       if not zone is None:
-        config.setRemoteZone(remote, zone)
-        ret["users"] = config.getZoneRemoteList(zone)
-      ret["active"] = config.getRemoteZone(remote)
+        core.setRemoteZone(remote, zone)
+        ret["users"] = core.getZoneRemoteList(zone)
+      ret["active"] = core.getRemoteZone(remote)
     else:
       ret["error"] = "No such remote " + remote
 
@@ -303,7 +310,7 @@ def api_detach(remote):
   ret = {
     "active" : None
   }
-  config.clearRemoteZone(remote)
+  core.clearRemoteZone(remote)
 
   ret = jsonify(ret)
   ret.status_code = 200
@@ -325,22 +332,22 @@ def api_command(remote, category, command, arguments):
   Executes said command supplied argument
   """
   ret = {}
-  lst = config.getRemoteCommands(remote)
+  lst = core.getRemoteCommands(remote)
 
   if category == None:
-    ret["zone"] = config.getRemoteZone(remote)
+    ret["zone"] = core.getRemoteZone(remote)
     ret["commands"] = lst
   elif category == "zone":
     if command not in lst["zone"]:
       ret["error"] = "%s is not a zone command" % command
-    elif config.execZoneCommand(remote, command, arguments):
+    elif core.execZoneCommand(remote, command, arguments):
       ret["result"] = "ok"
     else:
       ret["error"] = "%s failed" % command
   elif category == "scene":
     if command not in lst["scene"]:
       ret["error"] = "%s is not a scene command" % command
-    elif config.execSceneCommand(remote, command, arguments):
+    elif core.execSceneCommand(remote, command, arguments):
       ret["result"] = "ok"
     else:
       ret["error"] = "%s failed" % command
@@ -358,12 +365,12 @@ def api_debug():
   useful for debugging purposes.
   """
   ret = {
-    "routes" : config.getCurrentState(),
+    "routes" : core.getCurrentState(),
     "remotes" : remotes.list(),
     "subscribers" : [],
     "config" : {
-      "scenes" : config.getSceneList(),
-      "zones" : config.getZoneList(),
+      "scenes" : core.getSceneList(),
+      "zones" : core.getZoneList(),
     }
   }
   for l in event_subscribers:
@@ -396,10 +403,10 @@ def api_register(pin, name, desc, zone):
   be edited (or deleted) when the server isn't running.
   """
   ret = {}
-  if not config.checkPin(pin):
+  if not core.checkPin(pin):
     ret["error"] = "Invalid PIN"
   else:
-    if config.getZone(zone) is None:
+    if core.getZone(zone) is None:
       ret["error"] = "No such zone " + zone
     elif len(pin) == 32:
       ret["uuid"] = remotes.register(name, desc, zone, pin)
@@ -417,12 +424,12 @@ def api_unregister(pin, uuid):
   from any zone it might be a member of.
   """
   ret = {}
-  if not config.checkPin(pin, False):
+  if not core.checkPin(pin, False):
     ret["error"] = "Invalid PIN"
   elif not remotes.has(uuid):
     ret["error"] = "No such remote " + uuid
   else:
-    config.clearRemoteZone(uuid)
+    core.clearRemoteZone(uuid)
     remotes.unregister(uuid)
     ret["status"] = "Remote has been unregistered"
 
