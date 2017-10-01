@@ -333,6 +333,7 @@ def api_command(remote, category, command, arguments):
   """
   ret = {}
   lst = core.getRemoteCommands(remote)
+  result = None
 
   if category == None:
     ret["zone"] = core.getRemoteZone(remote)
@@ -340,10 +341,17 @@ def api_command(remote, category, command, arguments):
   elif category == "zone":
     if command not in lst["zone"]:
       ret["error"] = "%s is not a zone command" % command
-    elif core.execZoneCommand(remote, command, arguments):
-      ret["result"] = "ok"
     else:
-      ret["error"] = "%s failed" % command
+      result = core.execZoneCommand(remote, command, arguments)
+      if result == False or result == None:
+        ret["error"] = "%s failed" % command
+      elif result == True:
+        ret["result"] = "ok"
+      else:
+        # Advanced driver :)
+        ret = result
+        ret["result"] = "ok"
+        logging.debug('Result contains: ' + repr(result))
   elif category == "scene":
     if command not in lst["scene"]:
       ret["error"] = "%s is not a scene command" % command

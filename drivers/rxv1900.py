@@ -264,6 +264,24 @@ class driverRxv1900:
 
     return True
 
+  def getStatus(self, field=None):
+    url = self.cfg_YamahaController + "/report"
+    if field is not None and len(field) == 2:
+      url += "/" + field
+
+    try:
+      r = requests.get(url, timeout=5)
+      if r.status_code != 200:
+        logging.error("Remote was unable to execute command")
+        return None
+    except:
+      logging.exception("getStatus: " + url)
+      return None
+
+    j = r.json()
+    logging.info("Report said:" + repr(j))
+    return j
+
   def issueSystem(self, zone, command, data):
     function = self.SYSTEM_TABLE["zone" + str(zone)][command]
 
@@ -272,7 +290,7 @@ class driverRxv1900:
     if len(param) < 2:
       param = "0" + param
 
-    logging.debug("Zone " + str(zone) + ": " + repr(command) + " = " + repr(function))
+    logging.debug("Zone " + str(zone) + ": " + repr(command) + " = " + repr(function) + " (param: '" + repr(param) + "')")
     url = self.cfg_YamahaController + "/system/" + function[0] + param
     if function[1] != None:
       url += "/" + function[1]
@@ -307,8 +325,10 @@ class driverRxv1900:
       self.RESPONSE_HANDLER[result["command"]](result["command"], result["data"])
     return
 
-  def __init__(self, server):
+  def __init__(self, server, eventCallback=None):
     self.cfg_YamahaController = server
+    self.eventCallback = eventCallback
+
     # Some tracking stuff
     self.power = [False, False, False]
     self.volume = [0, 0, 0]
@@ -444,6 +464,7 @@ class driverRxv1900:
   #
   def setPower(self, zone, power):
     # Make sure we don't do silly things
+    ret = False
     zone = int(zone)
     if zone < 1 or zone > 3:
       logging.error("Zone " + str(zone) + " not supported by driver")
@@ -454,7 +475,14 @@ class driverRxv1900:
       return True
 
     if power:
-      ret = self.issueOperation(zone, "power_on")
+      if self.issueOperation(zone, "power_on"):
+        # TODO: HACK FOR VOLUME! THIS NEEDS TO BE IMPROVED!
+        zns = ['26', '27', 'A2']
+        z = zns[zone-1]
+        res = self.getStatus(z)
+        if 'result' in res and res['status'] == 200:
+          self.interpretResult(res["result"])
+        ret = {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
     else:
       ret = self.issueOperation(zone, "power_off")
     return ret
@@ -490,48 +518,68 @@ class driverRxv1900:
 
     return self.mute[zone-1]
 
+  def translateVolumeFrom(self, value):
+    return int(((value - 39) * 10000) / 160)
+
+  def translateVolumeTo(self, value):
+    return int((value * 160) / 10000 + 39)
+
   def setVolume(self, zone, volume):
     """Setting the volume directly works as follows:
-       0-100 is -80 to 0db (00-C7)
-       100-150 is 0 to +16.5db (C7-E8)
+       0-1000 is -80 to 0db (27-C7)
+       (DISABLED!) 100-150 is 0 to +16.5db (C7-E8)
     """
     zone = int(zone)
     if zone < 1 or zone > 3:
       logging.error("Zone " + str(zone) + " not supported by driver")
-      return 0
+      return False
 
     volume = int(volume)
     if volume > 100:
-      volume = ((volume * 2) * 33) / 100
-    else:
-      volume = (volume * 199) / 100
+      volume = 100
+    #  volume = ((volume * 2) * 33) / 100
+    #else:
+    volume = self.translateVolumeTo(volume)
 
-    return self.issueSystem(zone, "vol-set", "%02x" % volume)
+    logging.debug("setVoume(%s) = 0x%02x", volume, volume)
+
+    if self.issueSystem(zone, "vol-set", "%02x" % volume):
+      return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+    else:
+      return False
 
   def setVolumeUp(self, zone):
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
       logging.error("Zone " + str(zone) + " not supported by driver")
-      return 0
-    return self.issueOperation(zone, "vol-up")
+      return False
+    if self.volume[zone-1] < 199:
+      self.volume[zone-1] += 1
+      if self.issueOperation(zone, "vol-up"):
+        return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+    return False
 
   def setVolumeDown(self, zone):
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
       logging.error("Zone " + str(zone) + " not supported by driver")
-      return 0
-    return self.issueOperation(zone, "vol-down")
+      return False
+    if self.volume[zone-1] > 39:
+      self.volume[zone-1] -= 1
+      if self.issueOperation(zone, "vol-down"):
+        return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+    return False
 
   def getVolume(self, zone):
     # Make sure we don't do silly things
     zone = int(zone)
     if zone < 1 or zone > 3:
       logging.error("Zone " + str(zone) + " not supported by driver")
-      return 0
+      return False
 
-    return self.volume[zone-1]
+    return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
 
   def setInput(self, zone, input):
     # Make sure we don't do silly things
