@@ -535,8 +535,8 @@ class driverRxv1900:
       return False
 
     volume = int(volume)
-    if volume > 100:
-      volume = 100
+    if volume > 10000:
+      volume = 10000
     #  volume = ((volume * 2) * 33) / 100
     #else:
     volume = self.translateVolumeTo(volume)
