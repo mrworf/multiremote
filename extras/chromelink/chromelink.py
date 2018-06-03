@@ -27,18 +27,21 @@ class Config:
                 'device' : None, 
                 'address' : '10.0.3.151',
                 'zone' : 'zone2', 
-                'scene' : 'chromecast'
+                'scene' : 'chromecast',
+                'timeout' : 0,
             },
             'Living Room US' : {
                 'device' : None, 
                 'address' : '10.0.3.162',
                 'zone' : 'zone1', 
                 'scene' : 'castus', 
+                'timeout' : 0,
             },
         }
 
 class CastDevice:
-    def __init__(self, address, zone, scene):
+    def __init__(self, name, address, zone, scene):
+        self.name = name
         self.address = address
         self.zone = zone
         self.scene = scene
@@ -53,6 +56,9 @@ class CastDevice:
         self.listenIdle = None
 
         self.device = pychromecast.Chromecast(host=self.address, blocking=False)
+
+    def getName(self):
+        return self.name
 
     def getSocket(self):
         return self.device.socket_client.get_socket()
@@ -154,7 +160,7 @@ class CastMonitor:
         for entry in self.config.chromemap:
             logging.info('Initializing "%s"', entry)
             info = self.config.chromemap[entry]
-            device = CastDevice(info['address'], info['zone'], info['scene'])
+            device = CastDevice(entry, info['address'], info['zone'], info['scene'])
             if not device.isConnected():
                 logging.error('Unable to connect to "%s"', entry)
                 sys.exit(255)
@@ -163,14 +169,21 @@ class CastMonitor:
         logging.info('All devices ready')
 
     def idleListener(self, device, zone, scene):
+        info = self.config.chromemap[device.getName()]
         if device.isIdle():
+            # Make sure we don't turn off immediately since source might be changing on chromecast
+            # and we don't want on/off/on behavior
             # Offline
+            info['timeout'] = time.time() + 5
+            '''
             r = requests.get('%s/assign/%s' % (self.config.server, zone))
             if r.json()['active'] == scene:
                 logging.info('Turning off zone %s since no content is running', zone)
                 requests.get('%s/unassign/%s/%s' % (self.config.server, zone, self.config.token))
+            '''
         else:
             # Online!
+            info['timeout'] = 0
             r = requests.get('%s/assign/%s' % (self.config.server, zone))
             if r.json()['active'] is None:
                 logging.info('Zone %s is not in-use, turn it on', zone)
@@ -187,7 +200,7 @@ class CastMonitor:
                 sockets.append(self.config.chromemap[entry]['device'].getSocket())
 
             if len(sockets) != 0:
-                polltime = 5
+                polltime = 1
                 can_read, _, _ = select.select(sockets, [], [], polltime)
                 if can_read:
                     for entry in self.config.chromemap:
@@ -195,9 +208,15 @@ class CastMonitor:
                         self.config.chromemap[entry]['device'].processData()
                 
                 # Make sure all devices get a chance to deal with things
-                for entry in self.config.chromemap:
-                    self.config.chromemap[entry]['device'].handleTick()
-
+                for item in self.config.chromemap:
+                    entry = self.config.chromemap[item]
+                    entry['device'].handleTick()
+                    if entry['timeout'] != 0 and entry['timeout'] < time.time():
+                        entry['timeout'] = 0
+                        r = requests.get('%s/assign/%s' % (self.config.server, entry['zone']))
+                        if r.json()['active'] == entry['scene']:
+                            logging.info('Turning off zone %s since no content has been running for over 5s', entry['zone'])
+                            requests.get('%s/unassign/%s/%s' % (self.config.server, entry['zone'], self.config.token))
     
 parser = argparse.ArgumentParser(description="ChromeLink - Control multiRemote based on chromecast activity", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--debug', action='store_true', default=False, help="Enable additional information")
