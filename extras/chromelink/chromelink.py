@@ -29,6 +29,7 @@ class Config:
                 'zone' : 'zone2', 
                 'scene' : 'chromecast',
                 'timeout' : 0,
+                'auto' : False,
             },
             'Living Room US' : {
                 'device' : None, 
@@ -36,6 +37,7 @@ class Config:
                 'zone' : 'zone1', 
                 'scene' : 'castus', 
                 'timeout' : 0,
+                'auto' : False,
             },
         }
 
@@ -175,21 +177,18 @@ class CastMonitor:
             # and we don't want on/off/on behavior
             # Offline
             info['timeout'] = time.time() + 5
-            '''
-            r = requests.get('%s/assign/%s' % (self.config.server, zone))
-            if r.json()['active'] == scene:
-                logging.info('Turning off zone %s since no content is running', zone)
-                requests.get('%s/unassign/%s/%s' % (self.config.server, zone, self.config.token))
-            '''
         else:
             # Online!
             info['timeout'] = 0
             r = requests.get('%s/assign/%s' % (self.config.server, zone))
             if r.json()['active'] is None:
                 logging.info('Zone %s is not in-use, turn it on', zone)
+                info['auto'] = True
                 # FORCE max volume since we control it via the amplifier, so no need to run low
                 device.setVolume(1)
                 requests.get('%s/assign/%s/%s/%s/clone' % (self.config.server, zone, self.config.token, scene))
+            else:
+                info['auto'] = False
 
     def start(self):
         self.initChromecast()
@@ -214,9 +213,12 @@ class CastMonitor:
                     if entry['timeout'] != 0 and entry['timeout'] < time.time():
                         entry['timeout'] = 0
                         r = requests.get('%s/assign/%s' % (self.config.server, entry['zone']))
-                        if r.json()['active'] == entry['scene']:
+                        if r.json()['active'] == entry['scene'] and entry['auto']:
                             logging.info('Turning off zone %s since no content has been running for over 5s', entry['zone'])
                             requests.get('%s/unassign/%s/%s' % (self.config.server, entry['zone'], self.config.token))
+                        else:
+                            # If user changed input, don't automatically control the off mode anymore
+                            entry['auto'] = False
     
 parser = argparse.ArgumentParser(description="ChromeLink - Control multiRemote based on chromecast activity", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--debug', action='store_true', default=False, help="Enable additional information")
