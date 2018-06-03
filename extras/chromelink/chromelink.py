@@ -23,12 +23,123 @@ class Config:
         self.server = None
         self.token = None
         self.chromemap = {
-            'Speakers' : {'zone' : 'zone2', 'scene' : 'chromecast', 'device' : None, 'state' : 'UNKNOWN', 'laststate' : 0, 'reloadtime' : 0},
-            'Living Room US' : {'zone' : 'zone1', 'scene' : 'castus', 'device' : None, 'state' : 'UNKNOWN', 'laststate' : 0, 'reloadtime' : 0},
-            #'Living Room UK' : {'zone' : 'zone1', 'scene' : 'castuk', 'device' : None, 'state' : None},
-            #'Living Room DK' : {'zone' : 'zone1', 'scene' : 'castdk', 'device' : None, 'state' : None},
-            #'Living Room SE' : {'zone' : 'zone1', 'scene' : 'castse', 'device' : None, 'state' : None}
+            'Speakers' : {
+                'device' : None, 
+                'address' : '10.0.3.151',
+                'zone' : 'zone2', 
+                'scene' : 'chromecast'
+            },
+            'Living Room US' : {
+                'device' : None, 
+                'address' : '10.0.3.162',
+                'zone' : 'zone1', 
+                'scene' : 'castus', 
+            },
         }
+
+class CastDevice:
+    def __init__(self, address, zone, scene):
+        self.address = address
+        self.zone = zone
+        self.scene = scene
+        self.state = 'UNKNOWN'
+        self.appid = -1
+        self.idle = True
+        self.backdropSource = 'http://10.0.3.44/img/test.jpg'
+        self.backdropMime = 'image/jpeg'
+        self.backdropTimeout = 0
+
+        self.listenState = None
+        self.listenIdle = None
+
+        self.device = pychromecast.Chromecast(host=self.address, blocking=False)
+
+    def getSocket(self):
+        return self.device.socket_client.get_socket()
+
+    def isMySocket(self, socket):
+        logging.debug('My socket!! %d', self.device.socket_client.get_socket())
+        return self.device.socket_client.get_socket() == socket
+
+    def processData(self):
+        self.device.socket_client.run_once()
+
+        # Process any changes we need
+        if self.device.status is None:
+            return
+        self.handleState()
+        self.handleAppId()
+        self.handleIdle()
+
+    def handleTick(self):
+        # Should be called at least every 5 seconds since we need to monitor some stuff
+        # which might not actually give a status change
+        if self.device.status is None:
+            return
+        self.handleState()
+        self.handleAppId()
+        self.handleIdle()
+
+    def handleIdle(self):
+        # This is a special, if we detect backdrop, we swap to showing our image
+        # Either way, our image or backdrop is considered idle
+        isIdle = True
+        if self.device.status.app_id == 'E8C28D3C':
+            logging.info('Changing to our image to save bandwidth')
+            self.device.media_controller.play_media(self.backdropSource, self.backdropMime)
+            self.backdropTimeout = time.time() + 600
+        elif self.device.media_controller.status.content_id == self.backdropSource or (not self.device.media_controller.status.content_id and self.appid == 'CC1AD845'):
+            if self.backdropTimeout < time.time():
+                logging.info('Refreshing our image to avoid backdrop module')
+                self.device.media_controller.play_media(self.backdropSource, self.backdropMime)
+                self.backdropTimeout = time.time() + 600
+        else:
+            # Now, we need to check the state, UNKNOWN is considered idle
+            if self.state != 'UNKNOWN':
+                isIdle = False
+
+        if self.idle != isIdle:
+            logging.debug('%s Idle: %s', self.zone, repr(isIdle)) #, self.device.media_controller.status)
+            self.idle = isIdle
+            if self.listenIdle:
+                self.listenIdle(self, self.zone, self.scene)
+        return isIdle
+
+    def handleAppId(self):
+        if self.device.status.app_id == self.appid:
+            return False
+        self.appid = self.device.status.app_id
+        logging.debug('%s app id changed to %s', self.zone, self.appid)
+        return True
+
+    def handleState(self):
+        if self.device.media_controller.status.player_state == self.state:
+            return False
+        self.state = self.device.media_controller.status.player_state
+        logging.debug('%s state changed to %s', self.zone, self.state)
+        if self.listenState:
+            self.listenState(self, self.zone, self.scene)
+        return True
+
+    def getState(self):
+        return self.state
+
+    def isConnected(self):
+        return self.device.socket_client.is_connected
+
+    def isIdle(self):
+        return self.idle
+
+    def setIdleListener(self, listener):
+        self.listenIdle = listener
+    
+    def setStateListener(self, listener):
+        self.listenState = listener
+
+    def setVolume(self, volume):
+        if self.idle:
+            return
+        self.device.set_volume(volume)
 
 class CastMonitor:
     def __init__(self, server, token):
@@ -39,106 +150,54 @@ class CastMonitor:
         self.discoverStart = 0
         self.discoverStop = None
 
-    def discovered(self, chromecast):
-        # See if it's in the list of devices
-        if chromecast.device.friendly_name in self.config.chromemap:
-            if self.config.chromemap[chromecast.device.friendly_name]['device'] is None:
-                logging.debug('Device %s was discovered', chromecast.device.friendly_name)
-                self.config.chromemap[chromecast.device.friendly_name]['device'] = chromecast
-
-    def checkDiscover(self):
-        if self.discoverStart > time.time():
-            return
-        if self.discoverStop:
-            self.discoverStop()
-            self.discoverStop = None
-
-        # See if we've already discovered all devices...
-        skip = True
+    def initChromecast(self):
         for entry in self.config.chromemap:
-            if self.config.chromemap[entry]['device'] is None:
-                skip = False
-                break
+            logging.info('Initializing "%s"', entry)
+            info = self.config.chromemap[entry]
+            device = CastDevice(info['address'], info['zone'], info['scene'])
+            if not device.isConnected():
+                logging.error('Unable to connect to "%s"', entry)
+                sys.exit(255)
+            device.setIdleListener(self.idleListener)
+            self.config.chromemap[entry]['device'] = device
+        logging.info('All devices ready')
 
-        if not skip:
-            logging.debug('Reissuing discover since not all devices were found yet')
-            self.discoverStop = pychromecast.get_chromecasts(blocking=False, callback=self.discovered)
-            self.discoverStart = time.time() + 30 # Every 30s until all devices are detected
-        else:
-            self.discoverStart = time.time() + 600 # Do it a bit less often 
-
-    def checkStatus(self):
-        for entry in self.config.chromemap:
-            if self.config.chromemap[entry]['laststate'] > time.time():
-                continue
-            cast = self.config.chromemap[entry]['device']
-            if cast is not None and cast.status is not None:
-                # Always check the APP ID, because backdrop will suck up all our bandwidth
-                if cast.status.app_id == 'E8C28D3C':
-                    logging.info('Seems like backdrop is running, change to OUR image to save bandwidth')
-                    cast.media_controller.play_media('http://10.0.3.44/img/test.jpg', 'image/jpeg')
-                    self.config.chromemap[entry]['reloadtime'] = time.time() + 600 # We want to reload in 10min to not lose it
-                elif self.config.chromemap[entry]['device'].media_controller.status.content_id == 'http://10.0.3.44/img/test.jpg':
-                    if self.config.chromemap[entry]['reloadtime'] < time.time():
-                        logging.info('Refreshing image so we don\'t time out')
-                        cast.media_controller.play_media('http://10.0.3.44/img/test.jpg', 'image/jpeg')
-                        self.config.chromemap[entry]['reloadtime'] = time.time() + 600 # We want to reload in 10min to not lose it
-
-            self.config.chromemap[entry]['laststate'] = time.time() + 5 # We want to check in 5s
-
-
-    def handleDevice(self, entry):
-        cast = self.config.chromemap[entry]['device']
-        if cast is None:
-            logging.warning('handleDevice called for %s but no device available', entry)
-            return
-
-        self.config.chromemap[entry]['laststate'] = time.time() + 5 # We want to check in 5s
-
-        if cast.media_controller.status.player_state != self.config.chromemap[entry]['state']:
-            self.config.chromemap[entry]['state'] = cast.media_controller.status.player_state
-            logging.info('"%s" is now in state "%s"', entry, self.config.chromemap[entry]['state'])
-        else:
-            # No change, so don't process it
-            return
-
-        info = self.config.chromemap[entry]
-        if info['state'] == 'UNKNOWN' or info['device'].media_controller.status.content_id == 'http://10.0.3.44/img/test.jpg':
+    def idleListener(self, device, zone, scene):
+        if device.isIdle():
             # Offline
-            #logging.info('Chromecast is idle, see if we can turn off the zone')
-            r = requests.get('%s/assign/%s' % (self.config.server, info['zone']))
-            if r.json()['active'] == info['scene']:
-                logging.info('Turning off zone since no content is running')
-                requests.get('%s/unassign/%s/%s' % (self.config.server, info['zone'], self.config.token))
+            r = requests.get('%s/assign/%s' % (self.config.server, zone))
+            if r.json()['active'] == scene:
+                logging.info('Turning off zone %s since no content is running', zone)
+                requests.get('%s/unassign/%s/%s' % (self.config.server, zone, self.config.token))
         else:
             # Online!
-            #logging.info('Chromecast is active, see if we can turn on the zone')
-            r = requests.get('%s/assign/%s' % (self.config.server, info['zone']))
+            r = requests.get('%s/assign/%s' % (self.config.server, zone))
             if r.json()['active'] is None:
-                logging.info('Zone is not in-use, turn it on')
-                requests.get('%s/assign/%s/%s/%s/clone' % (self.config.server, info['zone'], self.config.token, info['scene']))
+                logging.info('Zone %s is not in-use, turn it on', zone)
+                # FORCE max volume since we control it via the amplifier, so no need to run low
+                device.setVolume(1)
+                requests.get('%s/assign/%s/%s/%s/clone' % (self.config.server, zone, self.config.token, scene))
 
     def start(self):
+        self.initChromecast()
         while True:
             # Build array of devices to monitor
             sockets = []
             for entry in self.config.chromemap:
-                if self.config.chromemap[entry]['device'] is not None:
-                    sockets.append(self.config.chromemap[entry]['device'].socket_client.get_socket())
+                sockets.append(self.config.chromemap[entry]['device'].getSocket())
 
             if len(sockets) != 0:
-                polltime = 1
+                polltime = 5
                 can_read, _, _ = select.select(sockets, [], [], polltime)
                 if can_read:
-                    #received something on the socket, handle it with run_once()
-                    for sock in can_read:
-                        for entry in self.config.chromemap:
-                            if self.config.chromemap[entry]['device'] is not None and self.config.chromemap[entry]['device'].socket_client.get_socket() == sock:
-                                self.config.chromemap[entry]['device'].socket_client.run_once()
-                                self.handleDevice(entry)
+                    for entry in self.config.chromemap:
+                        #if self.config.chromemap[entry]['device'].getSocket() in can_read:
+                        self.config.chromemap[entry]['device'].processData()
+                
+                # Make sure all devices get a chance to deal with things
+                for entry in self.config.chromemap:
+                    self.config.chromemap[entry]['device'].handleTick()
 
-            self.checkDiscover()
-            self.checkStatus()
     
 parser = argparse.ArgumentParser(description="ChromeLink - Control multiRemote based on chromecast activity", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--debug', action='store_true', default=False, help="Enable additional information")
