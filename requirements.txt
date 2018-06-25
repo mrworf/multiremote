@@ -1,0 +1,10 @@
+# If you don't have pip, install it using
+# curl https://bootstrap.pypa.io/get-pip.py | python3
+#
+ipaddress
+setuptools
+netifaces
+flask
+flask-cors
+requests
+tornardo

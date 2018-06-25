@@ -32,3 +32,23 @@ All above mentioned projects can be found at https://github.com/mrworf
 * Plex Home Theater via built-in driver
 * Roku via built-in driver
 * Any IR device which can be taught to IR-2-REST
+
+# Installation
+
+Get the necessary files to support building python modules on ubuntu
+```
+sudo apt-get install python-setuptools python-dev build-essential
+```
+
+Next, install pip (the one in ubuntu, python-pip is very old)
+```
+sudo curl https://bootstrap.pypa.io/get-pip.py | python3
+```
+
+Finally, install all dependencies
+```
+pip install -r requirements.txt
+```
+
+Now all you need to do is create a config file (`conf/setup.conf`)
+
