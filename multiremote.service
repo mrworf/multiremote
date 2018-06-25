@@ -1,0 +1,15 @@
+[Unit]
+Description=multiRemte - Advanced multi-user remote control
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/multiremote
+ExecStart=/root/multiremote/server.py
+Restart=on-abort
+SyslogIdentifier=multiRemote
+
+[Install]
+WantedBy=multi-user.target
+
