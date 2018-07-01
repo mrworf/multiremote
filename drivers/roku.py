@@ -42,10 +42,17 @@ import requests
 from xml.etree import ElementTree
 from commandtype import CommandType
 import logging
+import socket
 
 class driverRoku(driverNull):
   def __init__(self, server):
     driverNull.__init__(self)
+
+    # ALWAYS RESOLVE DNS NAMES TO IP or ROku will not respond!
+    details = socket.getaddrinfo(server, 80, socket.AF_INET, socket.SOCK_STREAM)
+    if details is None or len(details) < 1:
+      logging.error('Unable to resolve "%s" to a network address', server)
+    server = details[0][4][0]
 
     self.server = "http://" + server + ":8060/"
     self.home = None
