@@ -25,7 +25,7 @@ class Config:
         self.chromemap = {
             'Speakers' : {
                 'device' : None, 
-                'address' : '10.0.3.151',
+                'address' : 'chromecast-audio.sfo.sensenet.nu',
                 'zone' : 'zone2', 
                 'scene' : 'chromecast',
                 'timeout' : 0,
@@ -33,7 +33,7 @@ class Config:
             },
             'Living Room US' : {
                 'device' : None, 
-                'address' : '10.0.3.162',
+                'address' : 'chromecast.sfo.sensenet.nu',
                 'zone' : 'zone1', 
                 'scene' : 'castus', 
                 'timeout' : 0,
@@ -50,7 +50,7 @@ class CastDevice:
         self.state = 'UNKNOWN'
         self.appid = -1
         self.idle = True
-        self.backdropSource = 'http://10.0.3.44/img/test.jpg'
+        self.backdropSource = 'http://development.sfo.sensenet.nu/img/test.jpg'
         self.backdropMime = 'image/jpeg'
         self.backdropTimeout = 0
 
