@@ -33,13 +33,17 @@ import argparse
 """ Parse command line """
 parser = argparse.ArgumentParser(description="multiRemote - The future of IoT based remote control for your home", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', metavar="FILE", help="Log to file instead of stdout")
+parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
 parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
 parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
 cmdline = parser.parse_args()
 
 """ Setup logging first """
 logging.getLogger('').handlers = []
-logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s')
+if cmdline.debug or True: # Sorry, always full debug for now
+  logging.basicConfig(filename=cmdline.logfile, level=logging.DEBUG, format='%(filename)s@%(lineno)d - %(levelname)s - %(message)s')
+else:
+  logging.basicConfig(filename=cmdline.logfile, level=logging.INFO, format='%(filename)s@%(lineno)d - %(levelname)s - %(message)s')
 
 """ Continue with the rest """
 

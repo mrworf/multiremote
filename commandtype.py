@@ -109,3 +109,7 @@ class CommandType:
 
   # Undefined should NEVER be used, but are handy for automatic prefill
   PRIVATE_UNDEFINED     = 10000
+
+  @staticmethod
+  def isCommand(cmd):
+    return cmd < CommandType.LIMIT_GETCOMMANDS

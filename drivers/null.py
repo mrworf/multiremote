@@ -24,14 +24,141 @@ since it provides quite a bit of abstraction and easier power management.
 from commandtype import CommandType
 import traceback
 import logging
+import socket
+import requests
+from xml.etree import ElementTree
 
 class driverNull:
   def __init__(self):
     self.power = False
     self.COMMAND_HANDLER = {}
+    self.httpTimeout = 100 # 100ms
+    self.handlers = []
+
+  def eventOn(self):
+    """ Override to handle power on event
+    """
+    logging.warning("" + repr(self) + " is not implementing power on")
+
+  def eventOff(self):
+    """ Override to handle power off event
+    """
+    logging.warning("" + repr(self) + " is not implementing power off")
+
+  def eventExtras(self, keyvalue):
+    """ Override this to handle extra data
+    """
+    pass
+
+  ############################################################################
+  ## Functions below provide convenience for the new driver. 
+  ############################################################################
+
+  def _handleResponse(self, r, contentIsJSON=False, contentIsXML=False):
+    result = {
+      'success' : False, 
+      'code': 500, 
+      'content' : None
+    }
+    try:
+      if contentIsJSON:
+        content = r.json
+      elif contentIsXML:
+        content = ElementTree.fromstring(r.content)
+      else:
+        content = r.content
+      result = {
+        'success' : r.status_code == requests.codes.ok, 
+        'code': r.status_code, 
+        'content' : content
+      }
+    except:
+      logging.exception('Failed to parse result')
+    return result
+
+  def httpGet(self, url, contentIsJSON=False, contentIsXML=False):
+    result = {
+      'success' : False, 
+      'code': 500, 
+      'content' : None
+    }
+    try:
+      r = requests.get(url, timeout=self.httpTimeout/1000.0)
+      self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
+    except:
+      logging.exception('HTTP GET failed')
+    return result
+
+  def httpPost(self, url, data = None, contentIsJSON=False, contentIsXML=False):
+    result = {
+      'success' : False, 
+      'code': 500, 
+      'content' : None
+    }
+    try:
+      r = requests.post(url, data=data, timeout=self.httpTimeout/1000.0)
+      self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
+    except:
+      logging.exception('HTTP POST failed')
+    return result
+
+  def FQDN2IP(self, fqdn, getIPV6 = False):
+    """ Takes a regular DNS name and resolves it into an IP address instead.
+        If you provide an IP address, it will simply return the IP address.
+    """
+    try:
+      family = socket.AF_INET
+      if getIPV6:
+        family = socket.AF_INET6
+      details = socket.getaddrinfo(fqdn, 80, family, socket.SOCK_STREAM)
+      if details is None or len(details) < 1:
+        logging.error('Unable to resolve "%s" to a network address', fqdn)
+      elif len(details) > 1:
+        logging.warning('"%s" returned %d results, only using the first entry', fqdn, len(details))
+      return details[0][4][0]
+    except:
+      logging.exception('Unable to resolve "%s"', fqdn)
+      return None
+
+  def registerHandler(self, handler, cmds):
+    """ API: Registers a handler to be called for cmds defined in list
+        Does not have unregister since this should not change during its lifetime
+        """
+    self.handlers.append({'handler':handler, 'commands': cmds})
+
+  def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None, args = 0):
+    """ Convenience function, allows adding commands to the list which
+        is exposed by getCommands() and handleCommand()
+    """
+    name = command
+    desc = name
+
+    if extras == None:
+      self.COMMAND_HANDLER[command] = {
+        "arguments"   : args,
+        "handler"     : handler,
+        "name"        : name,
+        "description" : desc,
+        "type"        : cmdtype
+      }
+    else:
+      self.COMMAND_HANDLER[command] = {
+        "arguments"   : args,
+        "handler"     : handler,
+        "name"        : name,
+        "description" : desc,
+        "type"        : cmdtype,
+        "extras"      : extras
+      }
+
+
+  ############################################################################
+  ## Functions below are usually not overriden since they provide basic
+  ## housekeeping. It's better to override eventXXX() functions above.
+  ############################################################################
 
   def setPower(self, enable):
-    """ Changes the power state of the device, if the state already
+    """ API: Changes the power state of the device, if the state already
         is at the requested value, then nothing happens.
     """
 
@@ -47,18 +174,8 @@ class driverNull:
       logging.exception("Exception when calling setPower(%s)" % repr(enable))
     return True
 
-  def eventOn(self):
-    """ Override to handle power on event
-    """
-    logging.warning("" + repr(self) + " is not implementing power on")
-
-  def eventOff(self):
-    """ Override to handle power off event
-    """
-    logging.warning("" + repr(self) + " is not implementing power off")
-
   def applyExtras(self, keyvaluepairs):
-    """ Called when this device is selected as a scene, can be called more
+    """ API: Called when this device is selected as a scene, can be called more
         than once during a powered session, since user may switch between
         different scenes which all use the same driver but different extras.
 
@@ -77,13 +194,8 @@ class driverNull:
     if len(result) > 0:
       self.eventExtras(result)
 
-  def eventExtras(self, keyvalue):
-    """ Override this to handle extra data
-    """
-    pass
-
   def handleCommand(self, zone, command, argument):
-    """ Called by the server whenever a command needs to be executed,
+    """ API: Called by the server whenever a command needs to be executed,
         the only exception is power commands, they are ALWAYS called
         through the setPower() function.
 
@@ -97,6 +209,17 @@ class driverNull:
         A driver will be able to override this behavior by adding a flag
         to the command definition.
     """
+    '''
+    result = None
+    for handler in self.handlers:
+      if command in handler['commands']:
+        try:
+          result = handler['handler'](zone, command, argument)
+        except:
+          logging.exception("Exception executing command %s for zone %s" % (repr(command), repr(zone)))
+        break
+    return result
+    '''
     result = None
     if command not in self.COMMAND_HANDLER:
       logging.error("%s is not a supported command" % command)
@@ -119,12 +242,18 @@ class driverNull:
       logging.exception("Exception executing command %s for zone %s" % (repr(command), repr(zone)))
       return None
 
+
   def getCommands(self):
-    """ Returns the list of supported commands. For now it also limits this
+    """ API: Returns the list of supported commands. For now it also limits this
         list depending on the type. This is less than ideal, but for now
         this is how it's done.
     """
     ret = {}
+    '''
+    for handler in self.handlers:
+      for cmd in handler['commands']:
+        ret
+    '''
     for c in self.COMMAND_HANDLER:
       # Do not expose certain commands
       if self.COMMAND_HANDLER[c]["type"] > CommandType.LIMIT_GETCOMMANDS:
@@ -137,29 +266,3 @@ class driverNull:
         ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
     return ret
-
-  def addCommand(self, command, cmdtype, handler, name = None, desc = None, extras = None, args = 0):
-    """ Convenience function, allows adding commands to the list which
-        is exposed by getCommands() and handleCommand()
-    """
-    if name == None:
-      name = command
-    if desc == None:
-      desc = name
-    if extras == None:
-      self.COMMAND_HANDLER[command] = {
-        "arguments"   : args,
-        "handler"     : handler,
-        "name"        : name,
-        "description" : desc,
-        "type"        : cmdtype
-      }
-    else:
-      self.COMMAND_HANDLER[command] = {
-        "arguments"   : args,
-        "handler"     : handler,
-        "name"        : name,
-        "description" : desc,
-        "type"        : cmdtype,
-        "extras"      : extras
-      }

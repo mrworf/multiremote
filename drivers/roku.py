@@ -38,23 +38,17 @@ when user activates the scene.
 """
 
 from null import driverNull
-import requests
-from xml.etree import ElementTree
+#import requests
+#from xml.etree import ElementTree
 from commandtype import CommandType
 import logging
-import socket
 
 class driverRoku(driverNull):
   def __init__(self, server):
     driverNull.__init__(self)
 
     # ALWAYS RESOLVE DNS NAMES TO IP or ROku will not respond!
-    details = socket.getaddrinfo(server, 80, socket.AF_INET, socket.SOCK_STREAM)
-    if details is None or len(details) < 1:
-      logging.error('Unable to resolve "%s" to a network address', server)
-    server = details[0][4][0]
-
-    self.server = "http://" + server + ":8060/"
+    self.server = "http://" + self.FQDN2IP(server) + ":8060/"
     self.home = None
 
     self.addCommand("up",     CommandType.NAVIGATE_UP,      self.navUp)
@@ -73,12 +67,7 @@ class driverRoku(driverNull):
     self.addCommand("text",     CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
   def eventOff(self):
-    if self.home == None:
-      self.getApps()
-    if self.home == None:
-      logging.warning("Roku did not report a home screen id")
-      return
-    self.startApp(self.home)
+    requests.post(self.server + "keypress/Home")    
 
   def eventExtras(self, extras):
     """
@@ -107,8 +96,11 @@ class driverRoku(driverNull):
   def getApps(self):
     logging.debug("getApps() called")
     result = {}
-    r = requests.get(self.server + "query/apps")
-    tree = ElementTree.fromstring(r.content)
+    tree = self.httpGet(self.server + "query/apps", contentIsXML=True)
+    if tree['content'] is None:
+      return {}
+    tree = tree['content']
+
     if tree.tag != "apps":
       logging.error("Roku didn't respond with apps list")
       return {}
@@ -132,34 +124,34 @@ class driverRoku(driverNull):
     r = requests.post(self.server + "keypress/Up")
 
   def navDown(self, zone):
-    requests.post(self.server + "keypress/Down")
+    self.httpPost(self.server + "keypress/Down")
 
   def navLeft(self, zone):
-    requests.post(self.server + "keypress/Left")
+    self.httpPost(self.server + "keypress/Left")
 
   def navRight(self, zone):
-    requests.post(self.server + "keypress/Right")
+    self.httpPost(self.server + "keypress/Right")
 
   def navEnter(self, zone):
-    requests.post(self.server + "keypress/Select")
+    self.httpPost(self.server + "keypress/Select")
 
   def navBack(self, zone):
-    requests.post(self.server + "keypress/Back")
+    self.httpPost(self.server + "keypress/Back")
 
   def navHome(self, zone):
-    requests.post(self.server + "keypress/Home")
+    self.httpPost(self.server + "keypress/Home")
 
   def playbackInfo(self, zone):
-    requests.post(self.server + "keypress/Info")
+    self.httpPost(self.server + "keypress/Info")
 
   def playbackPlay(self, zone):
-    requests.post(self.server + "keypress/Play")
+    self.httpPost(self.server + "keypress/Play")
 
   def playbackFF(self, zone):
-    requests.post(self.server + "keypress/Fwd")
+    self.httpPost(self.server + "keypress/Fwd")
 
   def playbackRW(self, zone):
-    requests.post(self.server + "keypress/Rev")
+    self.httpPost(self.server + "keypress/Rev")
 
   def navTextInput(self, zone, txt):
     """ This function is somewhat limited since it does not care about
@@ -173,5 +165,4 @@ class driverRoku(driverNull):
         l = "Backspace"
       else:
         l = "Lit_" + l
-      requests.post(self.server + "keypress/" + l)
-
+      self.httpPost(self.server + "keypress/" + l)
