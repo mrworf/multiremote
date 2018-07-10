@@ -485,13 +485,24 @@ class WebSocket(WebSocketHandler):
     else:
       event_subscribers.append(self)
       self.remoteId = remoteId
+      self.subscriptions = []
 
   # TODO: We don't care (for now) about origin
   def check_origin(self, origin):
     return True
 
   def on_message(self, message):
-    logging.debug("Remote %s message: %s", self.remoteId, message)
+    if message.startswith('LOG '):
+      logging.debug('%s DEBUG: %s', self.remoteId, message[4:])
+    elif message.startswith('SUBSCRIBE '):
+      subscribe = message[10:].lower()
+      if subscribe in self.subscriptions:
+        logging.debug('%s already subcribed to %s', self.remoteId, subscribe)
+      else:
+        logging.debug('%s has subscribed to %s', self.remoteId, subscribe)
+        self.subscriptions.append(subscribe)
+    else:
+      logging.debug("%s sent unknown message: %s", self.remoteId, message)
 
   def on_close(self):
     logging.info("Remote %s has disconnected", self.remoteId)
@@ -500,7 +511,7 @@ class WebSocket(WebSocketHandler):
 """ Finally, launch! """
 if __name__ == "__main__":
   app.debug = False
-  logging.info("multiRemote running")
+  logging.info("multiRemote starting")
   container = WSGIContainer(app)
   server = Application([
     (r'/events/(.*)', WebSocket),
@@ -508,4 +519,5 @@ if __name__ == "__main__":
     ])
   server.listen(5000)
   ssdp.start()
+  logging.info("multiRemote running")
   IOLoop.instance().start()
