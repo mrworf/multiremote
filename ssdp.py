@@ -92,7 +92,7 @@ class SSDPHandler (threading.Thread):
   def getURN(self):
     return self.urn
 
-  def run(self):
+  def _initSSDP(self):
     self.sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -103,9 +103,12 @@ class SSDPHandler (threading.Thread):
 
     request = struct.pack('4sL', socket.inet_aton('239.255.255.250'), socket.INADDR_ANY)
     self.listener.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
-
+    self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192*2)  
     # Make sure we don't get stuck longer than 1s so we also can notify
     self.listener.settimeout(1)
+
+  def run(self):
+    self._initSSDP()
 
     nextNotify = 0
     while True:
@@ -113,12 +116,17 @@ class SSDPHandler (threading.Thread):
         self.sendNotify()
         nextNotify = time.time() + self.notifyInterval
       try:
-        data, sender = self.listener.recvfrom(1024)
+        data, sender = self.listener.recvfrom(1400)
         data = data.split('\r\n')
         if data[0] == 'M-SEARCH * HTTP/1.1':
+          #logging.debug('Search request from: ' + repr(sender))
           self.handleSearch(sender, data)
+      except socket.timeout:
+        pass # Ignore, it's by design
       except:
-        pass
+        logging.exception('Got an exception in main read loop')
+        # Reinit SSDP just-in-case
+        self._initSSDP()
 
   def resolveHost(self, sender):
     for i in netifaces.interfaces():
