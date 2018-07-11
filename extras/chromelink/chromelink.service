@@ -1,0 +1,17 @@
+[Unit]
+Description=ChromeLink - Links chromecast usage to zones and scenes in multiRemote
+After=network.target
+Requires=multiremote.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/multiremote/extras/chromelink/
+ExecStart=/root/multiremote/extras/chromelink/chromelink.py mapping.cfg
+Restart=on-abort
+SyslogIdentifier=ChromeLink
+
+[Install]
+WantedBy=multi-user.target
+
+

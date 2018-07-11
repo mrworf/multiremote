@@ -10,6 +10,7 @@ import time
 import select
 import sys
 import logging
+import os
 
 import requests
 import argparse
@@ -17,29 +18,100 @@ import argparse
 import pychromecast
 
 """ This should be a configuration file!
+
+    Format:
+        server <http://address:port/>
+        token <token>
+
+        name <name of chromecast>
+        device <ip/dns of chromecast>
+        zone <zone>
+        scene <scene>
+        ...
+
 """
 class Config:
     def __init__(self):
         self.server = None
         self.token = None
-        self.chromemap = {
-            'Speakers' : {
-                'device' : None, 
-                'address' : 'chromecast-audio.sfo.sensenet.nu',
-                'zone' : 'zone2', 
-                'scene' : 'chromecast',
-                'timeout' : 0,
-                'auto' : False,
-            },
-            'Living Room US' : {
-                'device' : None, 
-                'address' : 'chromecast.sfo.sensenet.nu',
-                'zone' : 'zone1', 
-                'scene' : 'castus', 
-                'timeout' : 0,
-                'auto' : False,
-            },
-        }
+        self.chromemap = {}
+
+    def load(self, filename='mapping.cfg'):
+        if not os.path.exists(filename):
+            logging.error('Missing config file "%s"', filename)
+            return False
+        try:
+            self.chromemap = {}
+            self.server = None
+            self.token = None
+            with open(filename) as file:
+                l=0
+                name = None
+                entry = None
+
+                for line in file:
+                    line = line.strip()
+                    l += 1
+                    if line.startswith('#') or line == '':
+                        continue
+                    if line.startswith('server '):
+                        if self.server is not None:
+                            logging.error('Multiple definitions of server, 2nd one found at line %d', l)
+                            return False
+                        self.server = line[7:].strip()
+                        if self.server == '':
+                            logging.error('Server field cannot be blank on line %d', l)
+                            return False
+                    elif line.startswith('token '):
+                        if self.token is not None:
+                            logging.error('Multiple definitions of token, 2nd one found at line %d', l)
+                            return False
+                        self.token = line[6:].strip()
+                        if self.token == '':
+                            logging.error('Token field cannot be blank on line %d', l)
+                            return False
+                    elif line.startswith('name '):
+                        if name is not None:
+                            # Check that all parts of the entry is filled out
+                            for k in ['address', 'zone', 'scene']:
+                                if entry[k] is None or entry[k] == '':
+                                    logging.error('Missing parts of "%s" definition: %s', name, repr(entry))
+                                    return False
+                            self.chromemap[name] = entry
+                        name = line[5:].strip()
+                        if name == '':
+                            logging.error('On line %d, name cannot be blank', l)
+                            return False
+                        if name in self.chromemap:
+                            logging.warning('"%s" is already defined (redefinition found at line %d)', l)
+                        entry = {'address':None, 'zone':None, 'scene':None, 'timeout': 0, 'auto': False, 'device': None}
+                    elif entry:
+                        if line.startswith('address '):
+                            entry['address'] = line[8:].strip()
+                        elif line.startswith('zone '):
+                            entry['zone'] = line[5:].strip()
+                        elif line.startswith('scene '):
+                            entry['scene'] = line[6:].strip()
+                        else:
+                            logging.error('Error on line %d: %s', l, line)
+                            return False
+                    else:
+                        logging.error('Error on line %d: %s', l, line)
+                        return False
+        except:
+            logging.exception('Cannot read file')
+            return False
+
+        # Check that all mandatory parts are available
+        if self.server is None:
+            logging.error('Missing server definition')
+        elif self.token is None:
+            logging.error('Missing token definition')
+        elif len(self.chromemap) == 0:
+            logging.error('No chromecast devices defined')
+        else:
+            return True
+        return False
 
 class CastDevice:
     def __init__(self, name, address, zone, scene):
@@ -150,10 +222,8 @@ class CastDevice:
         self.device.set_volume(volume)
 
 class CastMonitor:
-    def __init__(self, server, token):
-        self.config = Config()
-        self.config.server = server
-        self.config.token = token
+    def __init__(self, config):
+        self.config = config
 
         self.discoverStart = 0
         self.discoverStop = None
@@ -222,25 +292,24 @@ class CastMonitor:
     
 parser = argparse.ArgumentParser(description="ChromeLink - Control multiRemote based on chromecast activity", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--debug', action='store_true', default=False, help="Enable additional information")
-parser.add_argument('--server', default='http://localhost:5000', help="Which server to communicate with")
-parser.add_argument('--token', help="Token to use for controlling multiRemote (ie, remote id)")
+parser.add_argument('config', help='Configuration file to use')
 cmdline = parser.parse_args()
 
 if cmdline.debug:
-    logformat=u'%(asctime)s - %(filename)s@%(lineno)d - %(levelname)s - %(message)s'
+    logformat=u'%(filename)s@%(lineno)d - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logformat)
 else:
-    logformat=u'%(asctime)s - %(levelname)s - %(message)s'
+    logformat=u'%(levelname)s - %(message)s'
     logging.basicConfig(level=logging.WARNING, format=logformat)
 logging.getLogger('pychromecast').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-if cmdline.token is None:
-    logging.error('You must provide a token')
-    # e62496050e364aca86f25b1850c5a95b
-    sys.exit(255)
+# e62496050e364aca86f25b1850c5a95b
 
-monitor = CastMonitor(cmdline.server, cmdline.token)
+config = Config()
+if not config.load(cmdline.config):
+    sys.exit(255)
+monitor = CastMonitor(config)
 monitor.start()
 
 
