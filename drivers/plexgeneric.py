@@ -43,7 +43,7 @@ from null import driverNull
 from commandtype import CommandType
 import logging
 
-class driverRoku(driverNull):
+class driverPlexgeneric(driverNull):
   def __init__(self, server):
     driverNull.__init__(self)
 
@@ -66,57 +66,11 @@ class driverRoku(driverNull):
 
     self.addCommand("text",     CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
+    self.addCommand("subtitle",   CommandType.PLAYBACK_SUBTITLE,  self.playbackSubtitle)
+    self.addCommand("audio",      CommandType.PLAYBACK_AUDIO,     self.playbackAudio)
+
   def eventOff(self):
-    requests.post(self.server + "keypress/Home")    
-
-  def eventExtras(self, extras):
-    """
-    Two ways of doing this, either we are told the ID, or we need to
-    do a text search. Obviously text search using app=XXX is convenient
-    but also runs the risk (if poorly specified) to run the wrong app.
-
-    Use appid=XXX if you know the app id.
-    """
-    self.apps = self.getApps()
-
-    if "app" in extras:
-      k = extras["app"].lower()
-      for key in self.apps:
-        logging.debug("Testing \"%s\" for \"%s\", returning %d" % (key.lower(), k.lower(), key.lower().find(k)))
-        if key.lower().find(k) > -1:
-          self.startApp(self.apps[key])
-          break
-    elif "appid" in extras:
-      i = int(extras[appid])
-      for key in self.apps:
-        if self.apps[key] == i:
-          self.startApp(i)
-          break
-
-  def getApps(self):
-    logging.debug("getApps() called")
-    result = {}
-    tree = self.httpGet(self.server + "query/apps", contentIsXML=True)
-    if tree['content'] is None:
-      return {}
-    tree = tree['content']
-
-    if tree.tag != "apps":
-      logging.error("Roku didn't respond with apps list")
-      return {}
-    for branch in tree:
-      if branch.tag == "app" and branch.attrib["type"] == "menu":
-        if "home".find(branch.text.lower()) > -1:
-          self.home = int(branch.attrib["id"])
-
-      if branch.tag != "app" or branch.attrib["type"] != "appl":
-        continue
-      result[branch.text] = int(branch.attrib["id"])
-    logging.debug("getApps() = " + repr(result))
-    return result
-
-  def startApp(self, appid):
-    self.httpPost("%slaunch/%d" % (self.server, appid))
+    self.httpPost(self.server + "keypress/Home")    
 
   def navUp(self, zone):
     self.httpPost(self.server + "keypress/Up")
@@ -150,6 +104,12 @@ class driverRoku(driverNull):
 
   def playbackRW(self, zone):
     self.httpPost(self.server + "keypress/Rev")
+
+  def playbackSubtitle(self, zone):
+    self.httpPost(self.server + "keypress/Lit_s")
+
+  def playbackAudio(self, zone):
+    self.httpPost(self.server + "keypress/Lit_a")
 
   def navTextInput(self, zone, txt):
     """ This function is somewhat limited since it does not care about
