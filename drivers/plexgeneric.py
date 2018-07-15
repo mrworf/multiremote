@@ -60,7 +60,9 @@ class driverPlexgeneric(driverNull):
     self.addCommand("home",   CommandType.NAVIGATE_HOME,    self.navHome)
 
     self.addCommand("info",     CommandType.PLAYBACK_OSD,           self.playbackInfo)
-    self.addCommand("play",     CommandType.PLAYBACK_PLAYPAUSE,     self.playbackPlay)
+    self.addCommand("play",     CommandType.PLAYBACK_PLAY,          self.playbackPlay)
+    self.addCommand("pause",    CommandType.PLAYBACK_PAUSE,         self.playbackPause)
+    self.addCommand("stop",     CommandType.PLAYBACK_STOP,          self.playbackStop)
     self.addCommand("rewind",   CommandType.PLAYBACK_REWIND,        self.playbackRW)
     self.addCommand("forward",  CommandType.PLAYBACK_FASTFORWARD,   self.playbackFF)
 
@@ -71,6 +73,9 @@ class driverPlexgeneric(driverNull):
 
   def eventOff(self):
     self.httpPost(self.server + "keypress/Home")    
+
+  def eventOn(self):
+    self.httpPost(self.server + "keypress/multiremote_host:reload")    
 
   def navUp(self, zone):
     self.httpPost(self.server + "keypress/Up")
@@ -97,7 +102,13 @@ class driverPlexgeneric(driverNull):
     self.httpPost(self.server + "keypress/Info")
 
   def playbackPlay(self, zone):
-    self.httpPost(self.server + "keypress/Play")
+    self.httpPost(self.server + "keypress/multiremote_play")
+
+  def playbackPause(self, zone):
+    self.httpPost(self.server + "keypress/multiremote_pause")
+
+  def playbackStop(self, zone):
+    self.httpPost(self.server + "keypress/multiremote_stop")
 
   def playbackFF(self, zone):
     self.httpPost(self.server + "keypress/Fwd")
@@ -106,10 +117,10 @@ class driverPlexgeneric(driverNull):
     self.httpPost(self.server + "keypress/Rev")
 
   def playbackSubtitle(self, zone):
-    self.httpPost(self.server + "keypress/Lit_s")
+    self.httpPost(self.server + "keypress/multiremote_cycle_subtitles")
 
   def playbackAudio(self, zone):
-    self.httpPost(self.server + "keypress/Lit_a")
+    self.httpPost(self.server + "keypress/multiremote_cycle_audio")
 
   def navTextInput(self, zone, txt):
     """ This function is somewhat limited since it does not care about
