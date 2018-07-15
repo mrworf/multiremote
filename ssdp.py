@@ -112,10 +112,10 @@ class SSDPHandler (threading.Thread):
 
     nextNotify = 0
     while True:
-      if nextNotify < time.time():
-        self.sendNotify()
-        nextNotify = time.time() + self.notifyInterval
       try:
+        if nextNotify < time.time():
+          self.sendNotify()
+          nextNotify = time.time() + self.notifyInterval
         data, sender = self.listener.recvfrom(1400)
         data = data.split('\r\n')
         if data[0] == 'M-SEARCH * HTTP/1.1':
