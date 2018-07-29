@@ -36,6 +36,14 @@ class Config:
         self.token = None
         self.chromemap = {}
 
+    def _addEntry(self, name, entry):
+        # Check that all parts of the entry is filled out
+        for k in ['address', 'zone', 'scene']:
+            if entry[k] is None or entry[k] == '':
+                logging.error('Missing parts of "%s" definition: %s', name, repr(entry))
+                return False
+        self.chromemap[name] = entry
+
     def load(self, filename='mapping.cfg'):
         if not os.path.exists(filename):
             logging.error('Missing config file "%s"', filename)
@@ -72,12 +80,7 @@ class Config:
                             return False
                     elif line.startswith('name '):
                         if name is not None:
-                            # Check that all parts of the entry is filled out
-                            for k in ['address', 'zone', 'scene']:
-                                if entry[k] is None or entry[k] == '':
-                                    logging.error('Missing parts of "%s" definition: %s', name, repr(entry))
-                                    return False
-                            self.chromemap[name] = entry
+                            self._addEntry(name, entry)
                         name = line[5:].strip()
                         if name == '':
                             logging.error('On line %d, name cannot be blank', l)
@@ -98,6 +101,8 @@ class Config:
                     else:
                         logging.error('Error on line %d: %s', l, line)
                         return False
+                if name is not None and entry is not None:
+                    self._addEntry(name, entry)
         except:
             logging.exception('Cannot read file')
             return False
@@ -229,15 +234,25 @@ class CastMonitor:
         self.discoverStop = None
 
     def initChromecast(self):
+        broken = []
         for entry in self.config.chromemap:
-            logging.info('Initializing "%s"', entry)
-            info = self.config.chromemap[entry]
-            device = CastDevice(entry, info['address'], info['zone'], info['scene'])
-            if not device.isConnected():
-                logging.error('Unable to connect to "%s"', entry)
-                sys.exit(255)
-            device.setIdleListener(self.idleListener)
-            self.config.chromemap[entry]['device'] = device
+            try:
+                logging.info('Initializing "%s"', entry)
+                info = self.config.chromemap[entry]
+                device = CastDevice(entry, info['address'], info['zone'], info['scene'])
+                if not device.isConnected():
+                    logging.error('Unable to connect to "%s"', entry)
+                    sys.exit(255)
+                device.setIdleListener(self.idleListener)
+                self.config.chromemap[entry]['device'] = device
+            except:
+                logging.exception('Unable to initalize %s, skipping' % entry)
+                broken.append(entry)
+
+        # Remove all blank entries
+        for entry in broken:
+            self.config.chromemap.pop(entry, None)
+
         logging.info('All devices ready')
 
     def idleListener(self, device, zone, scene):
