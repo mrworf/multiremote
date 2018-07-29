@@ -32,7 +32,7 @@ class driverNull:
   def __init__(self):
     self.power = False
     self.COMMAND_HANDLER = {}
-    self.httpTimeout = 100 # 100ms
+    self.httpTimeout = 250 # 250ms
     self.handlers = []
 
   def eventOn(self):
