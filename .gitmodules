@@ -1,3 +1,6 @@
 [submodule "external/ir-devices"]
 	path = external/ir-devices
 	url = https://github.com/mrworf/ir-devices.git
+[submodule "html"]
+	path = html
+	url = git@github.com:mrworf/multiremote-ux.git
