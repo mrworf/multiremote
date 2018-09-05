@@ -36,7 +36,7 @@ parser.add_argument('--logfile', metavar="FILE", help="Log to file instead of st
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
 parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
 parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
-parser.add_argument('--host', metavar='HTML', default='', help='If set, use built-in HTTP server to host UX')
+parser.add_argument('--host', metavar='HTML', default=None, help='If set, use built-in HTTP server to host UX')
 cmdline = parser.parse_args()
 
 """ Setup logging first """
@@ -53,7 +53,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import Application, FallbackHandler
 from tornado.websocket import WebSocketHandler
 
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, abort, send_from_directory
 import threading
 import Queue
 import time
@@ -71,14 +71,14 @@ except ImportError:
   import os
   parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
   os.sys.path.insert(0, parentdir)
-  from flask.ext.cors import CORS
+  from flask_cors import CORS
 
 """ Disable some logging by-default """
 logging.getLogger("Flask-Cors").setLevel(logging.ERROR)
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 """ Initialize the REST server """
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/ux/')
 cors = CORS(app) # Needed to make us CORS compatible
 
 """ Create the various cogs of the machinery """
@@ -88,10 +88,16 @@ if not parser.load("conf/setup.conf", setup):
   logging.error('Failed to load "setup.conf"')
   sys.exit(255)
 
+if cmdline.host is not None:
+  if (":%d" % cmdline.port) not in setup['OPTIONS']["ux-server"] or not setup['OPTIONS']["ux-server"].endswith('/ux') or not setup['OPTIONS']["ux-server"].endswith('/ux/'):
+    logging.warning("You're using hosted UX, make sure \"%s\" points to the right server", setup['OPTIONS']["ux-server"])
+    logging.warning('It should use port %d and end with /ux/' % cmdline.port)
+
 remotes = RemoteManager()
 core    = Core(setup, remotes)
 router  = Router(core)
-ssdp    = SSDPHandler(setup['OPTIONS']["ux-server"])
+ssdp    = SSDPHandler(setup['OPTIONS']["ux-server"], cmdline.port)
+
 
 """ Tracking information """
 event_subscribers = []
@@ -477,6 +483,18 @@ def api_remotes(uuid):
 def api_ssdp():
   return Response(ssdp.generateXML(), mimetype='text/xml')
 
+@app.route('/ux', defaults={'path' : None})
+@app.route('/ux/', defaults={'path' : None})
+@app.route("/ux/<path:path>")
+def serve_html(path):
+  if cmdline.host is None:
+    logging.warning('Client tried to access UX hosting when not enabled')
+    abort(404)
+  else:
+    if path is None:
+      path = 'index.html'
+    return send_from_directory(cmdline.host, path)
+
 class WebSocket(WebSocketHandler):
   def open(self, remoteId):
     logging.info("Remote %s has connected", remoteId);
@@ -518,7 +536,7 @@ if __name__ == "__main__":
     (r'/events/(.*)', WebSocket),
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
-  server.listen(5000)
+  server.listen(cmdline.port)
   ssdp.start()
   logging.info("multiRemote running")
   IOLoop.instance().start()

@@ -46,11 +46,12 @@ class SSDPHandler (threading.Thread):
   By default this is set to empty string which means all available interfaces.
 
   """
-  def __init__(self, location, notifyInterval=15, listen=''):
+  def __init__(self, location, port, notifyInterval=15, listen=''):
     threading.Thread.__init__(self)
     self.daemon = True
     self.listen = listen
     self.location = location
+    self.port = port
     self.notifyInterval = notifyInterval
     self.urn = 'urn:sensenet-nu:service:multiRemote:1'
     self.usn = None
@@ -162,7 +163,7 @@ class SSDPHandler (threading.Thread):
 
     msg  = 'HTTP/1.1 200 OK\r\n'
     msg += 'Host: 239.255.255.250:1900\r\n'
-    msg += 'Location: http://%s:5000/description.xml\r\n' % host
+    msg += 'Location: http://%s:%d/description.xml\r\n' % (host, self.port)
     msg += 'Server: multiRemote/1.0\r\n'
     msg += 'NT: %s\r\n' % self.urn
     msg += 'NTS: ssdp:alive\r\n'
