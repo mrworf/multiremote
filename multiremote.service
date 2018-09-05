@@ -6,10 +6,9 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/multiremote
-ExecStart=/root/multiremote/server.py
+ExecStart=/root/multiremote/multiremote.py
 Restart=on-abort
 SyslogIdentifier=multiRemote
 
 [Install]
 WantedBy=multi-user.target
-

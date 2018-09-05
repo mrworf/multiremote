@@ -1,0 +1,3 @@
+[submodule "external/ir-devices"]
+	path = external/ir-devices
+	url = https://github.com/mrworf/ir-devices.git

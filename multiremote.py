@@ -57,11 +57,11 @@ import threading
 import Queue
 import time
 
-from remotemgr import RemoteManager
-from router import Router
-from core import Core
-from ssdp import SSDPHandler
-from parser import SetupParser
+from modules.remotemgr import RemoteManager
+from modules.router import Router
+from modules.core import Core
+from modules.ssdp import SSDPHandler
+from modules.parser import SetupParser
 
 try:
   from flask_cors import CORS # The typical way to import flask-cors

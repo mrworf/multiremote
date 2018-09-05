@@ -70,7 +70,7 @@ import requests
 import base64
 import json
 import time
-from commandtype import CommandType
+from modules.commandtype import CommandType
 import logging
 
 class driverIrplus(driverNull):

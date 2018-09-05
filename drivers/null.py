@@ -21,7 +21,7 @@ do.
 It's HIGHLY RECOMMENDED that drivers utilize this class as the base class,
 since it provides quite a bit of abstraction and easier power management.
 """
-from commandtype import CommandType
+from modules.commandtype import CommandType
 import traceback
 import logging
 import socket

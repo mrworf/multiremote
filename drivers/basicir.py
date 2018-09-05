@@ -21,7 +21,7 @@ from null import driverNull
 import requests
 import base64
 import json
-from commandtype import CommandType
+from modules.commandtype import CommandType
 import logging
 
 class driverBasicir(driverNull):

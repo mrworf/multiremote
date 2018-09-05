@@ -40,7 +40,7 @@ when user activates the scene.
 from null import driverNull
 #import requests
 #from xml.etree import ElementTree
-from commandtype import CommandType
+from modules.commandtype import CommandType
 import logging
 
 class driverRoku(driverNull):

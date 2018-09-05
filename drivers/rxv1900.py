@@ -17,7 +17,7 @@
 Implementation of RX-V1900 commands
 """
 import requests
-from commandtype import CommandType
+from modules.commandtype import CommandType
 import logging
 
 class driverRxv1900:
