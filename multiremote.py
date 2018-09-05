@@ -36,6 +36,7 @@ parser.add_argument('--logfile', metavar="FILE", help="Log to file instead of st
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
 parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
 parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
+parser.add_argument('--host', metavar='HTML', default='', help='If set, use built-in HTTP server to host UX')
 cmdline = parser.parse_args()
 
 """ Setup logging first """
