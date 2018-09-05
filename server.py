@@ -64,7 +64,7 @@ from ssdp import SSDPHandler
 from parser import SetupParser
 
 try:
-  from flask.ext.cors import CORS # The typical way to import flask-cors
+  from flask_cors import CORS # The typical way to import flask-cors
 except ImportError:
   # Path hack allows examples to be run without installation.
   import os
