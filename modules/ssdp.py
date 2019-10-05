@@ -94,6 +94,7 @@ class SSDPHandler (threading.Thread):
     return self.urn
 
   def _initSSDP(self):
+    logging.info('Init SSDP')
     self.sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -104,7 +105,7 @@ class SSDPHandler (threading.Thread):
 
     request = struct.pack('4sL', socket.inet_aton('239.255.255.250'), socket.INADDR_ANY)
     self.listener.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
-    self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192*2)  
+    self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192*2)
     # Make sure we don't get stuck longer than 1s so we also can notify
     self.listener.settimeout(1)
 
@@ -115,7 +116,8 @@ class SSDPHandler (threading.Thread):
     while True:
       try:
         if nextNotify < time.time():
-          self.sendNotify()
+          if not self.sendNotify():
+            raise Exception('Send failed, ugly way to trigger re-init')
           nextNotify = time.time() + self.notifyInterval
         data, sender = self.listener.recvfrom(1400)
         data = data.split('\r\n')
@@ -131,6 +133,8 @@ class SSDPHandler (threading.Thread):
 
   def resolveHost(self, sender):
     for i in netifaces.interfaces():
+      if netifaces.AF_INET not in netifaces.ifaddresses(i):
+        continue
       ii = netifaces.ifaddresses(i)[netifaces.AF_INET][0]
       if ipaddress.ip_address(unicode(sender)) in ipaddress.ip_network(unicode(ii['addr'] + '/' + ii['netmask']), strict=False):
         return ii['addr']
@@ -153,7 +157,10 @@ class SSDPHandler (threading.Thread):
     msg += 'Cache-Control: max-age=120\r\n'
     msg += '\r\n'
 
-    self.sender.sendto(msg, ('239.255.255.250', 1900))
+    if self.sender.sendto(msg, ('239.255.255.250', 1900)) < len(msg):
+      logging.error('Sending notification failed')
+      return False
+    return True
 
   def sendResponse(self, sender):
     host = self.resolveHost(sender[0])

@@ -66,10 +66,12 @@ class driverBasicir(driverNull):
     self.sendIr(command)
 
   def sendIr(self, command):
-    if not command in self.ircmds:
+    if command not in self.ircmds:
       logging.warning("%s is not a defined IR command" % command)
+      return False
 
     ir = self.ircmds[command]
+    logging.info(repr(ir))
 
     url = self.server + "/write"
     try:

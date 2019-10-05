@@ -38,8 +38,6 @@ class driverPlex(driverNull):
     self.urlApp = "/player/application/"
 
     self.server = "http://" + server + ":3005"
-    self.mac = macaddress
-    self.iface = iface
 
     self.addCommand("up",     CommandType.NAVIGATE_UP,      self.navUp)
     self.addCommand("down",   CommandType.NAVIGATE_DOWN,    self.navDown)
@@ -59,23 +57,17 @@ class driverPlex(driverNull):
     self.addCommand("text",   CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
   def eventOn(self):
-    if self.mac == None:
-      logging.warning("DriverPlex is not configured to support power management")
-      return
-    subprocess.call(['extras/etherwake', '-i', self.iface, self.mac])
-
-  def eventOff(self):
-    # Stop and navigate home (avoid leaving it playing)
     self.playbackStop(None)
     self.navHome(None)
-    # Sorry, no power control yet
-    logging.debug("Power off isn't implemented yet")
+
+  def eventOff(self):
+    self.playbackStop(None)
+    self.navHome(None)
 
   def navUp(self, zone):
     self.execServer(self.urlNavigate + "moveUp")
 
   def navDown(self, zone):
-    logging.info("Hello")
     self.execServer(self.urlNavigate + "moveDown")
 
   def navLeft(self, zone):
@@ -121,4 +113,3 @@ class driverPlex(driverNull):
         But it allows us to start using text input at least
     """
     self.execServer(self.urlApp + "sendString?text=" + txt)
-

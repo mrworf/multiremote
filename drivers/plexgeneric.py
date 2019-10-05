@@ -72,10 +72,10 @@ class driverPlexgeneric(driverNull):
     self.addCommand("audio",      CommandType.PLAYBACK_AUDIO,     self.playbackAudio)
 
   def eventOff(self):
-    self.httpPost(self.server + "keypress/multiremote_host:reboot")    
+    self.httpPost(self.server + "keypress/Home")    
 
   def eventOn(self):
-    self.httpPost(self.server + "keypress/Home")    
+    self.httpPost(self.server + "keypress/multiremote_host:reboot")    
 
   def navUp(self, zone):
     self.httpPost(self.server + "keypress/Up")

@@ -38,7 +38,7 @@ when user activates the scene.
 """
 
 from null import driverNull
-#import requests
+import requests
 #from xml.etree import ElementTree
 from modules.commandtype import CommandType
 import logging
@@ -97,6 +97,7 @@ class driverRoku(driverNull):
     logging.debug("getApps() called")
     result = {}
     tree = self.httpGet(self.server + "query/apps", contentIsXML=True)
+    logging.debug(repr(tree))
     if tree['content'] is None:
       return {}
     tree = tree['content']

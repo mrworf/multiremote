@@ -57,7 +57,7 @@ class driverNull:
   def _handleResponse(self, r, contentIsJSON=False, contentIsXML=False):
     result = {
       'success' : False, 
-      'code': 500, 
+      'code': 501, 
       'content' : None
     }
     try:
@@ -84,7 +84,8 @@ class driverNull:
     }
     try:
       r = requests.get(url, timeout=self.httpTimeout/1000.0)
-      self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
+      print(repr(r.content))
+      result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
     except:
       logging.exception('HTTP GET failed')
     return result
