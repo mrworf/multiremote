@@ -17,7 +17,7 @@
 Base IR driver, most of the time, this is what you need.
 """
 
-from null import driverNull
+from .null import driverNull
 import requests
 import base64
 import json

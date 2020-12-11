@@ -21,7 +21,7 @@ should it be possible.
 
 Also able to reply back regarding state of various parts of the system
 """
-from commandtype import CommandType
+from .commandtype import CommandType
 import logging
 
 class Core:

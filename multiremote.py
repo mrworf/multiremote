@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This file is part of multiRemote.
 #
@@ -29,6 +29,7 @@ to a new scene will automatically detach from the previous.
 
 import logging
 import argparse
+import sys
 
 """ Parse command line """
 parser = argparse.ArgumentParser(description="multiRemote - The future of IoT based remote control for your home", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -55,7 +56,7 @@ from tornado.websocket import WebSocketHandler
 
 from flask import Flask, jsonify, Response, abort, send_from_directory
 import threading
-import Queue
+import queue
 import time
 
 from modules.remotemgr import RemoteManager

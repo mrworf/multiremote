@@ -84,7 +84,7 @@ class driverNull:
     }
     try:
       r = requests.get(url, timeout=self.httpTimeout/1000.0)
-      print(repr(r.content))
+      print((repr(r.content)))
       result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
     except:
       logging.exception('HTTP GET failed')

@@ -16,7 +16,7 @@
 """
 Does nothing ... Yet :)
 """
-from null import driverNull
+from .null import driverNull
 
 class driverSpotify(driverNull):
   def __init__(self):

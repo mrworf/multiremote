@@ -19,13 +19,13 @@ Handles the actual control of the devices.
 It will process the routes in an atomical way to avoid an inconsistent state.
 """
 import threading
-import Queue
+import queue
 import time
 import logging
 
 class Router (threading.Thread):
   DELAY = 30 # delay in seconds
-  workList = Queue.Queue(10)
+  workList = queue.Queue(10)
 
   prevState = {}
 

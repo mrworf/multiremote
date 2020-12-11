@@ -19,7 +19,7 @@ Talks to a specified Plex Home Theater client over network and uses
 Wake-On-Lan to wake it from sleep.
 """
 
-from null import driverNull
+from .null import driverNull
 import requests
 import base64
 import json

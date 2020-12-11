@@ -17,12 +17,13 @@
 Base IR driver, most of the time, this is what you need.
 """
 
-from null import driverNull
+from .null import driverNull
 import requests
 import base64
 import json
 from modules.commandtype import CommandType
 import logging
+import os
 
 class driverBasicir(driverNull):
   def __init__(self, server, commandfile):
@@ -32,6 +33,10 @@ class driverBasicir(driverNull):
     self.code_off = "off"
     self.server = server
     self.file = commandfile
+
+    if not os.path.exists(commandfile):
+      logging.error('Cannot find "%s"', commandfile)
+      return
 
     jdata = open(commandfile)
     self.ircmds = json.load(jdata)

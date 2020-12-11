@@ -21,7 +21,7 @@ Wake-On-Lan to wake it from sleep.
 Note! Currently no way of placing PHT back to sleep after usage.
 """
 
-from null import driverNull
+from .null import driverNull
 import requests
 import base64
 import json

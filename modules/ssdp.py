@@ -120,6 +120,7 @@ class SSDPHandler (threading.Thread):
             raise Exception('Send failed, ugly way to trigger re-init')
           nextNotify = time.time() + self.notifyInterval
         data, sender = self.listener.recvfrom(1400)
+        data = data.decode('utf-8')
         data = data.split('\r\n')
         if data[0] == 'M-SEARCH * HTTP/1.1':
           #logging.debug('Search request from: ' + repr(sender))
@@ -136,7 +137,7 @@ class SSDPHandler (threading.Thread):
       if netifaces.AF_INET not in netifaces.ifaddresses(i):
         continue
       ii = netifaces.ifaddresses(i)[netifaces.AF_INET][0]
-      if ipaddress.ip_address(unicode(sender)) in ipaddress.ip_network(unicode(ii['addr'] + '/' + ii['netmask']), strict=False):
+      if ipaddress.ip_address(str(sender)) in ipaddress.ip_network(str(ii['addr'] + '/' + ii['netmask']), strict=False):
         return ii['addr']
     return None
 
@@ -157,7 +158,7 @@ class SSDPHandler (threading.Thread):
     msg += 'Cache-Control: max-age=120\r\n'
     msg += '\r\n'
 
-    if self.sender.sendto(msg, ('239.255.255.250', 1900)) < len(msg):
+    if self.sender.sendto(bytes(msg, encoding='utf-8'), ('239.255.255.250', 1900)) < len(msg):
       logging.error('Sending notification failed')
       return False
     return True
@@ -165,7 +166,7 @@ class SSDPHandler (threading.Thread):
   def sendResponse(self, sender):
     host = self.resolveHost(sender[0])
     if host is None:
-      print "ERROR: SSDP source could not be resolved to interface"
+      print("ERROR: SSDP source could not be resolved to interface")
       return
 
     msg  = 'HTTP/1.1 200 OK\r\n'

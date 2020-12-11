@@ -37,7 +37,7 @@ This will cause the driver to automatically start the correct app
 when user activates the scene.
 """
 
-from null import driverNull
+from .null import driverNull
 #import requests
 #from xml.etree import ElementTree
 from modules.commandtype import CommandType
