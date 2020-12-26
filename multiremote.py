@@ -30,6 +30,7 @@ to a new scene will automatically detach from the previous.
 import logging
 import argparse
 import sys
+import os
 
 """ Parse command line """
 parser = argparse.ArgumentParser(description="multiRemote - The future of IoT based remote control for your home", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -38,6 +39,7 @@ parser.add_argument('--debug', action='store_true', default=False, help='Enable 
 parser.add_argument('--port', default=5000, type=int, help="Port to listen on")
 parser.add_argument('--listen', metavar="ADDRESS", default="0.0.0.0", help="Address to listen on")
 parser.add_argument('--host', metavar='HTML', default=None, help='If set, use built-in HTTP server to host UX')
+parser.add_argument('--ssdp', action='store', default='yes', type=str, choices=['yes', 'no'], help='Controls use of SSDP')
 cmdline = parser.parse_args()
 
 """ Setup logging first """
@@ -79,7 +81,7 @@ logging.getLogger("Flask-Cors").setLevel(logging.ERROR)
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 """ Initialize the REST server """
-app = Flask(__name__, static_url_path='/ux/')
+app = Flask(__name__, static_url_path='')
 cors = CORS(app) # Needed to make us CORS compatible
 
 """ Create the various cogs of the machinery """
@@ -488,13 +490,18 @@ def api_ssdp():
 @app.route('/ux/', defaults={'path' : None})
 @app.route("/ux/<path:path>")
 def serve_html(path):
+  print(repr(path))
   if cmdline.host is None:
     logging.warning('Client tried to access UX hosting when not enabled')
     abort(404)
   else:
     if path is None:
       path = 'index.html'
-    return send_from_directory(cmdline.host, path)
+    actual = os.path.abspath(os.path.join(cmdline.host, path))
+    if not os.path.exists(actual):
+      logging.error('Unable to server %s, does not exist', actual)
+    #logging.debug('Sending file %s from %s', path, os.path.abspath(cmdline.host))
+    return send_from_directory(os.path.abspath(cmdline.host), path)
 
 class WebSocket(WebSocketHandler):
   def open(self, remoteId):
@@ -538,6 +545,9 @@ if __name__ == "__main__":
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
   server.listen(cmdline.port)
-  ssdp.start()
+  if cmdline.ssdp == 'yes':
+    ssdp.start()
+  else:
+    logging.warning('SSDP has been disabled from command line')
   logging.info("multiRemote running")
   IOLoop.instance().start()

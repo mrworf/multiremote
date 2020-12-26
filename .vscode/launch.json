@@ -5,10 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "multiRemote (no SSDP)",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/multiremote.py",
+            "args": ["--ssdp=no", "--host", "${workspaceFolder}/../multiremote-ux/"],
             "console": "integratedTerminal"
         }
     ]
