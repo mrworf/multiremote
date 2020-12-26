@@ -490,7 +490,7 @@ def api_ssdp():
 @app.route('/ux/', defaults={'path' : None})
 @app.route("/ux/<path:path>")
 def serve_html(path):
-  print(repr(path))
+  print((repr(path)))
   if cmdline.host is None:
     logging.warning('Client tried to access UX hosting when not enabled')
     abort(404)

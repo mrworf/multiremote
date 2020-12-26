@@ -375,7 +375,7 @@ class SetupParser:
           handler = self.findHandler(line, tree)
           temp = {}
           if handler is None or handler(config, line, temp) == False:
-            print('ERROR: Unable to parse "%s" at line %d' % (line, l))
+            print(('ERROR: Unable to parse "%s" at line %d' % (line, l)))
             return False
 
     warn = []
@@ -388,7 +388,7 @@ class SetupParser:
 
     if err is not None:
       print("ERROR: Validation of configuration failed")
-      print("       " + err)
+      print(("       " + err))
       return False
 
     for w in warn:

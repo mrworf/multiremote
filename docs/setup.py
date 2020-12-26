@@ -373,4 +373,4 @@ if __name__ == "__main__":
   parser = setupParser()
   parser.load("setup.conf", setup2)
   #print json.dumps(setup2["ROUTING_TABLE"], indent=2)
-  print repr(setup2["DRIVER_TABLE"])
+  print(repr(setup2["DRIVER_TABLE"]))

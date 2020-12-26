@@ -311,10 +311,10 @@ parser.add_argument('config', help='Configuration file to use')
 cmdline = parser.parse_args()
 
 if cmdline.debug:
-    logformat=u'%(filename)s@%(lineno)d - %(levelname)s - %(message)s'
+    logformat='%(filename)s@%(lineno)d - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logformat)
 else:
-    logformat=u'%(levelname)s - %(message)s'
+    logformat='%(levelname)s - %(message)s'
     logging.basicConfig(level=logging.WARNING, format=logformat)
 logging.getLogger('pychromecast').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
