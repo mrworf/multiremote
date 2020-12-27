@@ -66,7 +66,7 @@ from modules.router import Router
 from modules.core import Core
 from modules.ssdp import SSDPHandler
 from modules.parser import SetupParser
-
+from modules.api import multiremoteAPI
 try:
   from flask_cors import CORS # The typical way to import flask-cors
 except ImportError:
@@ -85,39 +85,55 @@ app = Flask(__name__, static_url_path='')
 cors = CORS(app) # Needed to make us CORS compatible
 
 """ Create the various cogs of the machinery """
-parser   = SetupParser()
-setup = {}
-if not parser.load("conf/setup.conf", setup):
-  logging.error('Failed to load "setup.conf"')
-  sys.exit(255)
 
-if cmdline.host is not None:
-  if (":%d" % cmdline.port) not in setup['OPTIONS']["ux-server"] or not setup['OPTIONS']["ux-server"].endswith('/ux') or not setup['OPTIONS']["ux-server"].endswith('/ux/'):
-    logging.warning("You're using hosted UX, make sure \"%s\" points to the right server", setup['OPTIONS']["ux-server"])
-    logging.warning('It should use port %d and end with /ux/' % cmdline.port)
+class WorkRunner(threading.Thread):
+  class Work:
+    def __init__(self, task, *args):
+      self.task = task
+      self.args = args
+      self.event = threading.Event()
+      self.result = None
+    
+    def wait(self):
+      self.event.wait()
 
-remotes = RemoteManager()
-core    = Core(setup, remotes)
-router  = Router(core)
-ssdp    = SSDPHandler(setup['OPTIONS']["ux-server"], cmdline.port)
+    def execute(self):
+      self.result = self.task(*self.args)
+      self.event.set()
 
+  def __init__(self):
+    threading.Thread.__init__(self)
+    self.queue = queue.Queue()
+    self.start()
+  
+  def asynctask(self, task, *args):
+    logging.debug('asynctask called')
+    w = WorkRunner.Work(task, *args)
+    self.queue.put_nowait(w)
+    return w
 
-""" Tracking information """
-event_subscribers = []
+  def synctask(self, task, *args):
+    logging.debug('synctask called')
+    w = self.asynctask(task, *args)
+    w.wait()
+    return w.result
 
-def notifySubscribers(zone, message):
-  for subscriber in event_subscribers:
-    if zone is None or core.getRemoteZone(subscriber.remoteId) == zone:
-      logging.info("Informing remote %s about \"%s\"", subscriber.remoteId, message)
-      subscriber.write_message(message)
-    else:
-      logging.info("Skipped remote %s", subscriber.remoteId)
+  def run(self):
+    while True:
+      w = self.queue.get()
+      logging.info('Processing work')
+      w.execute()
+
+workRunner = WorkRunner()
+
+api = multiremoteAPI()
+api.init(cmdline)
 
 """ Start defining REST end-points """
 @app.route("/")
 def api_root():
-  msg = {"status": "ok"}
-  result = jsonify(msg)
+  data = workRunner.synctask(api.getStatus)
+  result = jsonify(data)
   result.status_code = 200
   return result
 
@@ -127,30 +143,8 @@ def api_scene(scene):
   """
   Allows probing of the various scenes provided by multiREMOTE
   """
-  ret = {}
-
-  if scene is None:
-    scenes = core.getSceneList(None)
-  elif not core.hasScene(scene):
-    ret["error"] = "No such scene"
-    scenes = None
-  else:
-    scenes = [scene]
-
-  if scenes is not None:
-    for scene in scenes:
-      ret[scene] = {
-        "scene"       : scene,
-        "name"        : core.getScene(scene)["name"],
-        "description" : core.getScene(scene)["description"],
-        "ux-hint"     : core.getScene(scene)["ux-hint"],
-        "zones"       : core.getSceneZoneUsage(scene),
-        "remotes"     : core.getSceneRemoteUsage(scene),
-      }
-    if len(scenes) == 1:
-      ret = ret[scenes[0]]
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.getScene, scene)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
@@ -160,33 +154,8 @@ def api_zone(zone):
   """
   Allows probing of the various zones provided by multiREMOTE
   """
-  ret = {}
-
-  if zone is None:
-    zones = core.getZoneList();
-  elif not core.hasZone(zone):
-    ret["error"] = "No such zone"
-    zones = None
-  else:
-    zones = [zone]
-
-  if zones is not None:
-    for zone in zones:
-      ret[zone] = {
-        "zone"        : zone,
-        "name"        : core.getZone(zone)["name"],
-        "scene"       : core.getZoneScene(zone),
-        "remotes"     : core.getZoneRemoteList(zone),
-        "ux-hint"     : core.getZone(zone)["ux-hint"],
-        "compatible"  : core.getSceneListForZone(zone),
-      }
-      if core.hasSubZones(zone):
-        ret[zone]["subzones"] = core.getSubZoneList(zone)
-        ret[zone]["subzone"] = core.getSubZone(zone)
-        ret[zone]["subzone-default"] = core.getSubZoneDefault(zone)
-    if len(zones) == 1:
-      ret = ret[zones[0]]
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.getZone, zone)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
@@ -196,25 +165,12 @@ def api_subzone(zone, subzone):
   """
   Changes the subzone for a specific zone
   """
-  ret = {}
-  if not core.hasSubZones(zone):
-    ret["error"] = "Zone does not have subzones"
-  elif subzone is None:
-    ret["subzones"] = core.getSubZoneList(zone)
-  elif not core.hasSubZone(zone, subzone):
-    ret["error"] = "Zone does not have specified subzone"
-  else:
-    core.setSubZone(zone, subzone)
-    router.updateRoutes()
-    ret["subzone"] = core.getSubZone(zone)
-
-  if core.hasSubZones(zone):
-    ret["active-subzone"] = core.getSubZone(zone)
-  ret["zone"] = zone
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.getSubZone, zone, subzone)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
+'''
 @app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
 @app.route("/assign/<zone>", defaults={"scene" : None, "options" : None, "remote" : None})
 @app.route("/assign/<zone>/<remote>/<scene>", defaults={"options" : None})
@@ -505,10 +461,10 @@ def serve_html(path):
 
 class WebSocket(WebSocketHandler):
   def open(self, remoteId):
-    logging.info("Remote %s has connected", remoteId);
+    logging.info("Remote %s has connected", remoteId)
     if not remotes.has(remoteId):
-      logging.warning("No such remote registered, close connection");
-      self.finish();
+      logging.warning("No such remote registered, close connection")
+      self.finish()
     else:
       event_subscribers.append(self)
       self.remoteId = remoteId
@@ -534,20 +490,22 @@ class WebSocket(WebSocketHandler):
   def on_close(self):
     logging.info("Remote %s has disconnected", self.remoteId)
     event_subscribers.remove(self)
-
+'''
 """ Finally, launch! """
 if __name__ == "__main__":
   app.debug = False
   logging.info("multiRemote starting")
   container = WSGIContainer(app)
   server = Application([
-    (r'/events/(.*)', WebSocket),
+    #(r'/events/(.*)', WebSocket),
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
   server.listen(cmdline.port)
+  '''
   if cmdline.ssdp == 'yes':
     ssdp.start()
   else:
     logging.warning('SSDP has been disabled from command line')
+  '''
   logging.info("multiRemote running")
   IOLoop.instance().start()
