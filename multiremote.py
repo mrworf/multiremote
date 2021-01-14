@@ -67,6 +67,8 @@ from modules.core import Core
 from modules.ssdp import SSDPHandler
 from modules.parser import SetupParser
 from modules.api import multiremoteAPI
+from modules.eventmgr import EventHandler
+
 try:
   from flask_cors import CORS # The typical way to import flask-cors
 except ImportError:
@@ -107,13 +109,13 @@ class WorkRunner(threading.Thread):
     self.start()
   
   def asynctask(self, task, *args):
-    logging.debug('asynctask called')
+    #logging.debug('asynctask called')
     w = WorkRunner.Work(task, *args)
     self.queue.put_nowait(w)
     return w
 
   def synctask(self, task, *args):
-    logging.debug('synctask called')
+    #logging.debug('synctask called')
     w = self.asynctask(task, *args)
     w.wait()
     return w.result
@@ -170,75 +172,22 @@ def api_subzone(zone, subzone):
   ret.status_code = 200
   return ret
 
-'''
 @app.route("/assign", defaults={"zone" : None, "scene" : None, "options" : None})
 @app.route("/assign/<zone>", defaults={"scene" : None, "options" : None, "remote" : None})
 @app.route("/assign/<zone>/<remote>/<scene>", defaults={"options" : None})
 @app.route("/assign/<zone>/<remote>/<scene>/<options>")
 def api_assign(zone, remote, scene, options):
-  """
-  Options can be either clone or unassign:
-    clone = Other zones will do the same thing
-    unassign = Other zones will be unassigned
-  These are used in situations where assigning a zone fails with a conflict.
-  """
-  ret = {}
-
-  if zone == None:
-    ret["zones"] = core.getZoneList()
-  else:
-    if scene == None:
-      ret["scenes"] = core.getSceneListForZone(zone)
-    else:
-      conflict = core.checkConflict(zone, scene)
-      if conflict is None:
-        core.setZoneScene(zone, scene)
-        router.updateRoutes()
-      else:
-        if options is None:
-          ret["conflict"] = conflict
-        elif options == "unassign":
-          for z in conflict:
-            core.clearZoneScene(z)
-          core.setZoneScene(zone, scene)
-          router.updateRoutes()
-        elif options == "clone":
-          for z in conflict:
-            core.setZoneScene(z, scene)
-          core.setZoneScene(zone, scene)
-          router.updateRoutes()
-    ret["active"] = core.getZoneScene(zone)
-    ret["zone"] = zone
-
-    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : core.getZoneScene(zone) } })
-    notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : True}})
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.assignZone, zone, remote, scene, options)
+  ret = jsonify(data)
   ret.status_code = 200
-
   return ret
 
 @app.route("/unassign", defaults={"zone" : None, "remote" : None})
 @app.route("/unassign/<zone>/<remote>")
 def api_unassign(zone, remote):
-  """
-  Removes any scenes assigned to a zone, also resets subzone back to
-  the defined default.
-  """
-  ret = {}
-
-  if zone == None:
-    ret["zones"] = core.getZoneList()
-  else:
-    core.clearZoneScene(zone)
-    core.clearSubZone(zone)
-    notifySubscribers(zone, {"type":"scene", "source" : remote, "data": {"scene" : None } })
-    notifySubscribers(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : False}})
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.unassignZone, zone, remote)
+  ret = jsonify(data)
   ret.status_code = 200
-
-  router.updateRoutes()
   return ret
 
 @app.route("/attach", defaults={"remote" : None, "zone" : None, "options" : None})
@@ -246,43 +195,15 @@ def api_unassign(zone, remote):
 @app.route("/attach/<remote>/<zone>", defaults={"options" : None})
 @app.route("/attach/<remote>/<zone>/<options>")
 def api_attach(remote, zone, options):
-  """
-  Attaches a remote to a zone, so that it can control it
-  """
-  ret = {}
-
-  if remote is None:
-    r = []
-    for z in core.getZoneList():
-      i = core.getZoneRemoteList(z)
-      r.extend(i)
-    ret["active"] = r
-  else:
-    if remotes.has(remote):
-      if not zone is None:
-        core.setRemoteZone(remote, zone)
-        ret["users"] = core.getZoneRemoteList(zone)
-      ret["active"] = core.getRemoteZone(remote)
-    else:
-      ret["error"] = "No such remote " + remote
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.attachRemote, remote, zone, options)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/detach/<remote>")
 def api_detach(remote):
-  """
-  Detaches a remote from the selected zone.
-  In detached state, no scenes or commands are available
-  """
-
-  ret = {
-    "active" : None
-  }
-  core.clearRemoteZone(remote)
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.detachRemote, remote)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
@@ -290,157 +211,44 @@ def api_detach(remote):
 @app.route("/command/<remote>/<category>/<command>", defaults={"arguments" : None})
 @app.route("/command/<remote>/<category>/<command>/<arguments>")
 def api_command(remote, category, command, arguments):
-  """
-  /command/<remote>
-  Lists available commands for remote, if remote is not attached, this will
-  return an error.
-
-  /command/<remote>/<category>/<command>
-  Executes said command without any arguments
-
-  /command/<remote>/<category>/<command>/<arguments>
-  Executes said command supplied argument
-  """
-  ret = {}
-  lst = core.getRemoteCommands(remote)
-  result = None
-
-  if category == None:
-    ret["zone"] = core.getRemoteZone(remote)
-    ret["commands"] = lst
-  elif category == "zone":
-    if command not in lst["zone"]:
-      ret["error"] = "%s is not a zone command" % command
-    else:
-      result = core.execZoneCommand(remote, command, arguments)
-      if result == False or result == None:
-        ret["error"] = "%s failed" % command
-      elif result == True:
-        ret["result"] = "ok"
-      else:
-        # Advanced driver :)
-        ret = result
-        ret["result"] = "ok"
-        logging.debug('Result contains: ' + repr(result))
-  elif category == "scene":
-    if command not in lst["scene"]:
-      ret["error"] = "%s is not a scene command" % command
-    elif core.execSceneCommand(remote, command, arguments):
-      ret["result"] = "ok"
-    else:
-      ret["error"] = "%s failed" % command
-  else:
-    ret["error"] = "%s is not a supported category" % category
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.executeCommand, remote, category, command, arguments)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/debug")
 def api_debug():
-  """
-  Handy endpoint which prints out current routing/state of the system,
-  useful for debugging purposes.
-  """
-  ret = {
-    "routes" : core.getCurrentState(),
-    "remotes" : remotes.list(),
-    "subscribers" : [],
-    "config" : {
-      "scenes" : core.getSceneList(),
-      "zones" : core.getZoneList(),
-    }
-  }
-  for l in event_subscribers:
-    ret["subscribers"].append(l.remoteId)
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.getDebugInformation)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/register/<pin>/<name>/<desc>/<zone>")
 def api_register(pin, name, desc, zone):
-  """
-  Allows remotes to register themselves with the system. For registration,
-  remote must provide:
-  <pin>  = PIN which has been configured in multiremote, or an existing UUID
-  <name> = Human-readable name that can be used by the system
-  <desc> = Short human-readable description of device
-  <zone> = Zone which should be considered the default or home zone for the remote
-
-  Upon success, the server will return a UNIQUE id which has to be used in situations
-  where you refer to the remote.
-
-  Should it fail, the server returns error AND a description of why.
-
-  Registering an existing remote will invalidate the old UID, making that invalid.
-  Reregistering can be used to change the name, desc or zone if the UUID is provided
-  as PIN.
-
-  Registrations are saved as a JSON file locally on the server and should only
-  be edited (or deleted) when the server isn't running.
-  """
-  ret = {}
-  if not core.checkPin(pin):
-    ret["error"] = "Invalid PIN"
-  else:
-    if core.getZone(zone) is None:
-      ret["error"] = "No such zone " + zone
-    elif len(pin) == 32:
-      ret["uuid"] = remotes.register(name, desc, zone, pin)
-    else:
-      ret["uuid"] = remotes.register(name, desc, zone)
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.registerRemote, pin, name, desc, zone)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/unregister/<pin>/<uuid>")
 def api_unregister(pin, uuid):
-  """
-  Removes a registered remote from the system, also detaches
-  from any zone it might be a member of.
-  """
-  ret = {}
-  if not core.checkPin(pin, False):
-    ret["error"] = "Invalid PIN"
-  elif not remotes.has(uuid):
-    ret["error"] = "No such remote " + uuid
-  else:
-    core.clearRemoteZone(uuid)
-    remotes.unregister(uuid)
-    ret["status"] = "Remote has been unregistered"
-
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.unregisterRemote, pin, uuid)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/remotes", defaults={"uuid": None})
 @app.route("/remotes/<uuid>")
 def api_remotes(uuid):
-  """
-  Lists all registered remotes and which zones they're currently
-  attached to.
-  """
-  ret = {}
-  if uuid is None:
-    ret = {"remotes" : remotes.list()}
-  elif uuid == "*":
-    for r in remotes.list():
-      ret[r] = remotes.describe(r)
-  else:
-    ret = remotes.describe(uuid)
-    if ret is None:
-      ret = {"error": "No such remote"}
-    else:
-      ret["uuid"] = uuid
-  ret = jsonify(ret)
+  data = workRunner.synctask(api.getRemotes, uuid)
+  ret = jsonify(data)
   ret.status_code = 200
   return ret
 
 @app.route("/description.xml")
 def api_ssdp():
-  return Response(ssdp.generateXML(), mimetype='text/xml')
+  data = workRunner.synctask(api.getSSDPDescriptor)
+  return Response(data, mimetype='text/xml')
 
 @app.route('/ux', defaults={'path' : None})
 @app.route('/ux/', defaults={'path' : None})
@@ -459,45 +267,34 @@ def serve_html(path):
     #logging.debug('Sending file %s from %s', path, os.path.abspath(cmdline.host))
     return send_from_directory(os.path.abspath(cmdline.host), path)
 
+# Cheap workaround to allow us to schedule work on the main thread
+main_thread = IOLoop.instance()
+
 class WebSocket(WebSocketHandler):
   def open(self, remoteId):
-    logging.info("Remote %s has connected", remoteId)
-    if not remotes.has(remoteId):
+    if not api.hasRemote(remoteId):
       logging.warning("No such remote registered, close connection")
       self.finish()
     else:
-      event_subscribers.append(self)
-      self.remoteId = remoteId
-      self.subscriptions = []
+      api.events.addRemote(EventHandler.Remote(self, remoteId, lambda msg: main_thread.add_callback(callback=lambda: self.write_message(msg))))
 
   # TODO: We don't care (for now) about origin
   def check_origin(self, origin):
     return True
 
   def on_message(self, message):
-    if message.startswith('LOG '):
-      logging.debug('%s DEBUG: %s', self.remoteId, message[4:])
-    elif message.startswith('SUBSCRIBE '):
-      subscribe = message[10:].lower()
-      if subscribe in self.subscriptions:
-        logging.debug('%s already subcribed to %s', self.remoteId, subscribe)
-      else:
-        logging.debug('%s has subscribed to %s', self.remoteId, subscribe)
-        self.subscriptions.append(subscribe)
-    else:
-      logging.debug("%s sent unknown message: %s", self.remoteId, message)
+    api.events.handleMessage(self, message)
 
   def on_close(self):
-    logging.info("Remote %s has disconnected", self.remoteId)
-    event_subscribers.remove(self)
-'''
+    api.events.removeRemote(socket=self)
+
 """ Finally, launch! """
 if __name__ == "__main__":
   app.debug = False
   logging.info("multiRemote starting")
   container = WSGIContainer(app)
   server = Application([
-    #(r'/events/(.*)', WebSocket),
+    (r'/events/(.*)', WebSocket),
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
   server.listen(cmdline.port)
