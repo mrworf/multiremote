@@ -74,7 +74,7 @@ class EventHandler:
       remote.subscribe(data)
     else:
       if command.upper() in self.commands:
-        self.commands[command.upper()](data)
+        self.commands[command.upper()](remote, data)
       else:
         logging.debug("%s sent unknown message: %s", remote.uuid, message)
 

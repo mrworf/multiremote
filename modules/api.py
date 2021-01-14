@@ -2,6 +2,8 @@ import threading
 import queue
 import time
 import logging
+import json
+from inspect import signature
 
 import flask
 
@@ -348,6 +350,40 @@ class multiremoteAPI:
     def getSSDPDescriptor(self):
       return self.ssdp.generateXML()
 
-    def handleCommand(self, data):
+    def handleCommand(self, remote, data):
       logging.debug('YAY! We got a command via websocket instead of HTTP')
+      obj = json.loads(data)
+      logging.debug('Data in message says: %s', repr(obj))
+
+      mapping = { 'attach' : self.attachRemote }
+      parts = obj['addr'][1:].split('/')
+      
+      if parts[0] in mapping:
+        # Figure out how many parameters it expects and substitute with None
+        sig = signature(mapping[parts[0]])
+        delta = len(sig.parameters) - len(parts) + 1
+        if delta < 0:
+          logging.error('We were provided MORE parameters than expected, abort!')
+          return
+        #logging.debug('Delta is %d', delta)
+        for x in range(0, delta):
+          parts.append(None)
+        if len(parts) > 1:
+          result = mapping[parts[0]](*parts[1:])
+        else:
+          result = mapping[parts[0]]()
+
+        retstr = json.dumps(
+          {
+            'type' : 'result', 
+            'source' : remote.uuid,
+            'data': {
+              'id' : obj['id'], 
+              'result' : result
+            }
+          }
+        )
+        logging.debug('Result: ' + retstr)
+        remote.post(retstr)
+
       return
