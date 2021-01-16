@@ -33,6 +33,7 @@ import uuid
 import logging
 import json
 import os.path
+import sys
 
 class SSDPHandler (threading.Thread):
   CONFIGFILE = "ssdp-info.json"
@@ -55,6 +56,10 @@ class SSDPHandler (threading.Thread):
     self.notifyInterval = notifyInterval
     self.urn = 'urn:sensenet-nu:service:multiRemote:1'
     self.usn = None
+
+    self.sender = None
+    self.listener = None
+    self.lastinit = 0
 
     self.load()
     if self.usn is None:
@@ -95,6 +100,26 @@ class SSDPHandler (threading.Thread):
 
   def _initSSDP(self):
     logging.info('Init SSDP')
+    if (time.time() - self.lastinit) < 1:
+      logging.error('We have been reiniting the SSDP service too often, abort!')
+      raise Exception('SSDP reinit failure')
+
+    self.lastinit = time.time()
+    if self.sender is not None:
+      try:
+        self.sender.close()
+      except:
+        logging.exception('Unable to close sender socket')
+      finally:
+        self.sender = None
+    if self.listener is not None:
+      try:
+        self.listener.close()
+      except:
+        logging.exception('Unable to close listener socket')
+      finally:
+        self.listener = None
+
     self.sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -128,8 +153,9 @@ class SSDPHandler (threading.Thread):
       except socket.timeout:
         pass # Ignore, it's by design
       except:
-        logging.exception('Got an exception in main read loop')
+        logging.exception('Got an exception in main read loop, try re-init')
         # Reinit SSDP just-in-case
+	nextNotify = 0
         self._initSSDP()
 
   def resolveHost(self, sender):
