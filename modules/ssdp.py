@@ -155,7 +155,7 @@ class SSDPHandler (threading.Thread):
       except:
         logging.exception('Got an exception in main read loop, try re-init')
         # Reinit SSDP just-in-case
-	nextNotify = 0
+        nextNotify = 0
         self._initSSDP()
 
   def resolveHost(self, sender):
@@ -205,7 +205,7 @@ class SSDPHandler (threading.Thread):
     msg += 'Cache-Control: max-age=120\r\n'
     msg += '\r\n'
 
-    self.sender.sendto(msg, sender)
+    self.sender.sendto(msg.encode(), sender)
 
   def generateXML(self):
     result = """<?xml version="1.0" encoding="UTF-8"?>

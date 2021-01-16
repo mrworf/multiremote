@@ -298,11 +298,9 @@ if __name__ == "__main__":
     (r'.*', FallbackHandler, dict(fallback=container))
     ])
   server.listen(cmdline.port)
-  '''
   if cmdline.ssdp == 'yes':
-    ssdp.start()
+    api.ssdp.start()
   else:
     logging.warning('SSDP has been disabled from command line')
-  '''
   logging.info("multiRemote running")
   IOLoop.instance().start()
