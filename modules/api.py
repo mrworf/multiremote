@@ -352,10 +352,25 @@ class multiremoteAPI:
 
     def handleCommand(self, remote, data):
       logging.debug('YAY! We got a command via websocket instead of HTTP')
+      logging.debug('Contents: ' + repr(data))
       obj = json.loads(data)
       logging.debug('Data in message says: %s', repr(obj))
 
-      mapping = { 'attach' : self.attachRemote }
+      mapping = { 
+        'attach' : self.attachRemote,
+        'subzone' : self.getSubZone,
+        'zone' : self.getZone,
+        'assign' : self.assignZone,
+        'command' : self.executeCommand,
+        'unassign' : self.unassignZone,
+        'scene' : self.getScene,
+        'detach' : self.detachRemote,
+        'debug' : self.getDebugInformation,
+        'register' : self.registerRemote,
+        'unregister' : self.unregisterRemote,
+        'remotes' : self.remotes,
+        
+      }
       parts = obj['addr'][1:].split('/')
       
       if parts[0] in mapping:
@@ -385,5 +400,6 @@ class multiremoteAPI:
         )
         logging.debug('Result: ' + retstr)
         remote.post(retstr)
-
+      else:
+        logging.warning('Unregistered mapping: ' + parts[0])
       return

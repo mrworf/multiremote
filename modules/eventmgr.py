@@ -65,6 +65,7 @@ class EventHandler:
       logging.error('Got message from unregistered endpoint')
       return
 
+    logging.debug('Incoming websocket msg: ' + message)
     command, data = message.strip().split(' ', 1)
 
     # These should be registered instead of a major if-statement
