@@ -19,7 +19,7 @@ Talks to a specified Plex Home Theater client over network and uses
 Wake-On-Lan to wake it from sleep.
 """
 
-from .null import driverNull
+from .base import driverBase
 import requests
 import base64
 import json
@@ -28,12 +28,11 @@ import subprocess
 import logging
 import socket
 
-class driverEventinput(driverNull):
-  def __init__(self, server, macaddress = None, iface = "eth0"):
-    driverNull.__init__(self)
+class driverEventinput(driverBase):
+  def init(self, server, macaddress, iface='eth0'):
 
     self.server = server
-    self.port =5050
+    self.port = 5050
     self.mac = macaddress
     self.iface = iface
 
@@ -122,5 +121,5 @@ class driverEventinput(driverNull):
         self.socket.sendto(data, (self.server, self.port))
 
     except:
-      logging.exception("execServer: " + url)
+      logging.exception(f"execServer: sending UDP packet to {self.server}:{self.port} failed")
       return False

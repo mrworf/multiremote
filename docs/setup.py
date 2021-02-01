@@ -28,7 +28,7 @@ from drivers.keyinput  import driverKeyinput
 from drivers.roku      import driverRoku
 
 from drivers.basicir   import driverBasicir
-from drivers.null      import driverNull
+from drivers.null      import driverBase
 
 from parser import setupParser
 
@@ -71,7 +71,7 @@ class SystemSetup_DEAD:
     "projector" : driverIrplus(AV + ":5001", "config/projector.json"),
     "plex"      : driverKeyinput("plex.sfo.sensenet.nu", "00:25:22:e0:94:7d", "eth0"),
     "roku"      : driverRoku("roku-livingroom.sfo.sensenet.nu"),
-    "null1"     : driverNull(),
+    "null1"     : driverBase(),
   }
 
   """

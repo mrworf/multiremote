@@ -27,13 +27,26 @@ import logging
 import socket
 import requests
 from xml.etree import ElementTree
+from dataclasses import field,make_dataclass
 
-class driverNull:
-  def __init__(self):
+class driverBase:
+  def __init__(self, *args):
     self.power = False
     self.COMMAND_HANDLER = {}
     self.httpTimeout = 250 # 250ms
     self.handlers = []
+    self.eventManager = None
+
+    # Invoke the real init function
+    self.init(*args)
+
+  def setEventManager(self, eventManager):
+    self.eventManager = eventManager
+
+  def init(self):
+    """ Override to do additional initialization
+    """
+    pass
 
   def eventOn(self):
     """ Override to handle power on event
@@ -49,6 +62,13 @@ class driverNull:
     """ Override this to handle extra data
     """
     pass
+
+  def isAsync(self):
+    ''' Override this to change async behavior, default is True
+    Async means that multiple instances of this driver can be
+    used in parallel. 
+    '''
+    return True
 
   ############################################################################
   ## Functions below provide convenience for the new driver. 
@@ -68,7 +88,7 @@ class driverNull:
       else:
         content = r.content
       result = {
-        'success' : r.status_code == requests.codes.ok, 
+        'success' : r.status_code == requests.codes.ok,
         'code': r.status_code, 
         'content' : content
       }
@@ -235,9 +255,9 @@ class driverNull:
           result = item["handler"](zone)
       elif item["arguments"] == 1:
         if "extras" in item:
-          result = item["handler"](zone, args[0], item["extras"])
+          result = item["handler"](zone, argument[0], item["extras"])
         else:
-          result = item["handler"](zone, args[0])
+          result = item["handler"](zone, argument[0])
       return result
     except:
       logging.exception("Exception executing command %s for zone %s" % (repr(command), repr(zone)))
@@ -267,3 +287,7 @@ class driverNull:
         ret[c]["description"] = self.COMMAND_HANDLER[c]["description"]
       ret[c]["type"] = self.COMMAND_HANDLER[c]["type"]
     return ret
+
+  def sendEvent(self, eventType, eventSource, eventData, zone=None):
+    #         self.events.notify(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : True}})
+    self.eventManager.notify(zone, {"type":eventType, "source":eventSource, "data":eventData})

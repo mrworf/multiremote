@@ -674,3 +674,12 @@ class Core:
       return self.REMOTEMGR.has(pin)
     else:
       return pin == self.OPTIONS["pin-remote"]
+
+  def updateZoneState(self, zone, remote):
+    ret = {}
+    # Uses the event manager to send relevant state information to the remote
+    data = self.execZoneCommand(remote, 'volume-get', None)
+    if data and 'volume' in data:
+      ret['volume'] : data['volume']
+    return ret
+      

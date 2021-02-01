@@ -18,9 +18,10 @@ Implementation of RX-V1900 commands
 """
 import requests
 from modules.commandtype import CommandType
+from .base import driverBase
 import logging
 
-class driverRxv1900:
+class driverRxv1900(driverBase):
   cfg_YamahaController = None
 
   # Will be filled out by init
@@ -325,9 +326,8 @@ class driverRxv1900:
       self.RESPONSE_HANDLER[result["command"]](result["command"], result["data"])
     return
 
-  def __init__(self, server, eventCallback=None):
+  def init(self, server):
     self.cfg_YamahaController = server
-    self.eventCallback = eventCallback
 
     # Some tracking stuff
     self.power = [False, False, False]
@@ -371,6 +371,13 @@ class driverRxv1900:
         "description" : "Sets the volume to a specific level",
         "type"        : CommandType.VOLUME_SET
       },
+      "volume-get"    : {
+        "arguments"   : 0,
+        "handler"     : self.getVolume,
+        "name"        : "Get Volume",
+        "description" : "Gets the volume for a zone",
+        "type"        : CommandType.VOLUME_GET
+      },
       "volume-mute"   : {
         "arguments"   : 0,
         "handler"     : self.setMute, "extras" : True,
@@ -413,12 +420,6 @@ class driverRxv1900:
         "arguments"   : 0,
         "handler"     : self.setInput, "extras" : "input-cbl",
         "name"        : "Input CBL",
-        "type"        : CommandType.PRIVATE_INPUT
-      },
-      "input-dvd"      : {
-        "arguments"   : 0,
-        "handler"     : self.setInput, "extras" : "input-dvd",
-        "name"        : "Input DVD",
         "type"        : CommandType.PRIVATE_INPUT
       },
       "input-cd"      : {
@@ -483,6 +484,8 @@ class driverRxv1900:
         if 'result' in res and res['status'] == 200:
           self.interpretResult(res["result"])
         ret = {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+
+        self.sendEvent('state', None, {'zone' : f'zone{zone}', 'volume' : ret['volume']})
     else:
       ret = self.issueOperation(zone, "power_off")
     return ret
@@ -544,7 +547,9 @@ class driverRxv1900:
     logging.debug("setVoume(%s) = 0x%02x", volume, volume)
 
     if self.issueSystem(zone, "vol-set", "%02x" % volume):
-      return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+      ret = {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+      self.sendEvent('state', None, {'zone' : f'zone{zone}', 'volume' : ret['volume']})
+      return ret
     else:
       return False
 
@@ -557,7 +562,9 @@ class driverRxv1900:
     if self.volume[zone-1] < 199:
       self.volume[zone-1] += 1
       if self.issueOperation(zone, "vol-up"):
-        return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+        ret = {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+        self.sendEvent('state', None, {'zone' : f'zone{zone}', 'volume' : ret['volume']})
+        return ret
     return False
 
   def setVolumeDown(self, zone):
@@ -569,7 +576,10 @@ class driverRxv1900:
     if self.volume[zone-1] > 39:
       self.volume[zone-1] -= 1
       if self.issueOperation(zone, "vol-down"):
-        return {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+        ret = {'volume' : self.translateVolumeFrom(self.volume[zone-1])}
+        self.sendEvent('state', None, {'zone' : f'zone{zone}', 'volume' : ret['volume']})
+        return ret
+
     return False
 
   def getVolume(self, zone):

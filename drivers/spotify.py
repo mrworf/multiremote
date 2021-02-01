@@ -16,8 +16,8 @@
 """
 Does nothing ... Yet :)
 """
-from .null import driverNull
+from .base import driverBase
 
-class driverSpotify(driverNull):
-  def __init__(self):
-    driverNull.__init__(self)
+class driverSpotify(driverBase):
+  def init(self):
+    pass

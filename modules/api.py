@@ -14,6 +14,9 @@ from modules.ssdp import SSDPHandler
 from modules.parser import SetupParser
 from modules.eventmgr import EventHandler
 
+def alwaysObject(x):
+  return "***Unknown***"
+
 class multiremoteAPI:
     def __init__(self):
         pass
@@ -37,6 +40,10 @@ class multiremoteAPI:
         self.events  = EventHandler(self.core)
 
         self.events.registerCommand('execute', self.handleCommand)
+
+        # Also assign the eventmanager to all drivers
+        for _, v in self.setup['DRIVER_TABLE'].items():
+          v.setEventManager(self.events)
 
     def getStatus(self):
         msg = {"status": "ok"}
@@ -186,6 +193,7 @@ class multiremoteAPI:
       ret = {}
 
       if remote is None:
+        # Return remote(s) currently viewing this zone
         r = []
         for z in self.core.getZoneList():
           i = self.core.getZoneRemoteList(z)
@@ -194,8 +202,13 @@ class multiremoteAPI:
       else:
         if self.remotes.has(remote):
           if not zone is None:
+            # Assign the remote to this zone
             self.core.setRemoteZone(remote, zone)
+            state = self.core.updateZoneState(zone, remote)
+            state['zone'] = zone
+            self.events.notify(None, {"type":"state", "source" : remote, "data": state})
             ret["users"] = self.core.getZoneRemoteList(zone)
+          # Show the zone active for this remote
           ret["active"] = self.core.getRemoteZone(remote)
         else:
           ret["error"] = "No such remote " + remote
@@ -272,8 +285,8 @@ class multiremoteAPI:
           "zones" : self.core.getZoneList(),
         }
       }
-      for l in self.event_subscribers:
-        ret["subscribers"].append(l.remoteId)
+      for l in self.events.remotes:
+        ret["subscribers"].append(l.uuid)
       return ret
 
     def registerRemote(self, pin, name, desc, zone):
@@ -369,7 +382,7 @@ class multiremoteAPI:
         'register' : self.registerRemote,
         'unregister' : self.unregisterRemote,
         'remotes' : self.remotes,
-        
+
       }
       parts = obj['addr'][1:].split('/')
       

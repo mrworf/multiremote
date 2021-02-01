@@ -21,7 +21,7 @@ Wake-On-Lan to wake it from sleep.
 Note! Currently no way of placing PHT back to sleep after usage.
 """
 
-from .null import driverNull
+from .base import driverBase
 import requests
 import base64
 import json
@@ -29,9 +29,8 @@ from modules.commandtype import CommandType
 import subprocess
 import logging
 
-class driverPlex(driverNull):
-  def __init__(self, server, macaddress = None, iface = "eth0"):
-    driverNull.__init__(self)
+class driverPlex(driverBase):
+  def init(self, server):
 
     self.urlPlayback = "/player/playback/"
     self.urlNavigate = "/player/navigation/"

@@ -37,15 +37,14 @@ This will cause the driver to automatically start the correct app
 when user activates the scene.
 """
 
-from .null import driverNull
+from .base import driverBase
 #import requests
 #from xml.etree import ElementTree
 from modules.commandtype import CommandType
 import logging
 
-class driverPlexgeneric(driverNull):
-  def __init__(self, server):
-    driverNull.__init__(self)
+class driverPlexgeneric(driverBase):
+  def init(self, server):
 
     # ALWAYS RESOLVE DNS NAMES TO IP or ROku will not respond!
     self.server = "http://" + self.FQDN2IP(server) + ":8060/"

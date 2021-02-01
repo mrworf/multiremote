@@ -19,7 +19,7 @@ Talks to a specified Plex Home Theater client over network and uses
 Wake-On-Lan to wake it from sleep.
 """
 
-from .null import driverNull
+from .base import driverBase
 import requests
 import base64
 import json
@@ -27,9 +27,8 @@ from modules.commandtype import CommandType
 import subprocess
 import logging
 
-class driverKeyinput(driverNull):
-  def __init__(self, server, macaddress = None, iface = "eth0"):
-    driverNull.__init__(self)
+class driverKeyinput(driverBase):
+  def init(self, server, macaddress, iface='eth0'):
 
     self.server = "http://" + server + ":5000"
     self.mac = macaddress
@@ -117,7 +116,8 @@ class driverKeyinput(driverNull):
       if text is not None:
         data['text'] = text
 
-      r = requests.post(self.server + "/interact", data=json.dumps(data), timeout=5)
+      url = self.server + "/interact"
+      r = requests.post(url, data=json.dumps(data), timeout=5)
       if r.status_code != 200:
         logging.error("Driver was unable to execute %s due to %s" % (repr(data), repr(r)))
         return False
@@ -131,7 +131,8 @@ class driverKeyinput(driverNull):
       if hibernate:
         data['state'] = "hibernate"
 
-      r = requests.post(self.server + "/power", data=json.dumps(data), timeout=5)
+      url = self.server + "/power"
+      r = requests.post(url, data=json.dumps(data), timeout=5)
       if r.status_code != 200:
         logging.error("Driver was unable to execute %s due to %s" % (repr(data), repr(r)))
         return False

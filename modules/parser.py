@@ -367,14 +367,14 @@ class SetupParser:
           continue
 
         #Use existing handler if we have one
-        if handler is not None and handler(config, line, temp) == False:
+        if handler and handler(config, line, temp) == False:
           handler = None
 
         # No handler? No problem, find one!
-        if handler is None:
+        if not handler:
           handler = self.findHandler(line, tree)
           temp = {}
-          if handler is None or handler(config, line, temp) == False:
+          if not handler or handler(config, line, temp) == False:
             print(('ERROR: Unable to parse "%s" at line %d' % (line, l)))
             return False
 

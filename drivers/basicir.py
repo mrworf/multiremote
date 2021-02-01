@@ -17,7 +17,7 @@
 Base IR driver, most of the time, this is what you need.
 """
 
-from .null import driverNull
+from .base import driverBase
 import requests
 import base64
 import json
@@ -25,24 +25,22 @@ from modules.commandtype import CommandType
 import logging
 import os
 
-class driverBasicir(driverNull):
-  def __init__(self, server, commandfile):
-    driverNull.__init__(self)
-
+class driverBasicir(driverBase):
+  def init(self, server, commandfile):
     self.code_on = "on"
     self.code_off = "off"
     self.server = server
     self.file = commandfile
 
-    if not os.path.exists(commandfile):
-      logging.error('Cannot find "%s"', commandfile)
+    if not os.path.exists(self.file):
+      logging.error('Cannot find "%s"', self.file)
       return
 
-    jdata = open(commandfile)
+    jdata = open(self.file)
     self.ircmds = json.load(jdata)
     if not "on" in self.ircmds:
-      logging.debug("Using toggle for %s instead of discreet on/off" % commandfile)
-      code_on = code_off = "toggle"
+      logging.debug("Using toggle for %s instead of discreet on/off" % self.file)
+      self.code_on = self.code_off = "toggle"
 
     """
     By default, this driver will prefill the commandlist with PRIVATE_UNDEFINED, this way

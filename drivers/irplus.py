@@ -64,7 +64,7 @@ For automatic power management to work, you need to define an on and an off
 sequence. If you miss either or both, the power manegement will not happen.
 
 """
-from .null import driverNull
+from .base import driverBase
 import requests
 import base64
 import json
@@ -74,9 +74,8 @@ import logging
 
 from modules.commandtype import CommandType
 
-class driverIrplus(driverNull):
-  def __init__(self, server, commandfile):
-    driverNull.__init__(self)
+class driverIrplus(driverBase):
+  def init(self, server, commandfile):
 
     self.server = server
     self.cmd_on = None
@@ -85,17 +84,17 @@ class driverIrplus(driverNull):
     self.cooldown = 0
     self.cmdfile = commandfile
 
-    if not os.path.exists(commandfile):
-      logging.error('No such file "%s"', commandfile)
+    if not os.path.exists(self.cmdfile):
+      logging.error('No such file "%s"', self.cmdfile)
       return
       
-    jdata = open(commandfile)
+    jdata = open(self.cmdfile)
     data = json.load(jdata)
 
     if data['file'].startswith('/'):
       jdata = open(data["file"])
     else:
-      path = os.path.dirname(commandfile)
+      path = os.path.dirname(self.cmdfile)
       jdata = open(os.path.join(path, data["file"]))
     self.ircmds = json.load(jdata)
 

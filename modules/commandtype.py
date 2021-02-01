@@ -44,6 +44,7 @@ class CommandType:
   VOLUME_MUTE     = 3
   VOLUME_UNMUTE   = 4
   VOLUME_SET      = 5   # Takes argument, 0-100 = 0-100% volume, 100-150 = 0-50% above 0dB
+  VOLUME_GET      = 6
 
   PLAYBACK_PLAY           = 100
   PLAYBACK_PAUSE          = 101
