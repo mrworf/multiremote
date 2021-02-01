@@ -679,7 +679,8 @@ class Core:
     ret = {}
     # Uses the event manager to send relevant state information to the remote
     data = self.execZoneCommand(remote, 'volume-get', None)
+    logging.debug('updateZoneState: ' + repr(data))
     if data and 'volume' in data:
-      ret['volume'] : data['volume']
+      ret['volume'] = data['volume']
     return ret
       

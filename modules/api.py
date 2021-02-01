@@ -206,7 +206,7 @@ class multiremoteAPI:
             self.core.setRemoteZone(remote, zone)
             state = self.core.updateZoneState(zone, remote)
             state['zone'] = zone
-            self.events.notify(None, {"type":"state", "source" : remote, "data": state})
+            self.events.notify(None, {"type":"state", "source" : None, "data": state})
             ret["users"] = self.core.getZoneRemoteList(zone)
           # Show the zone active for this remote
           ret["active"] = self.core.getRemoteZone(remote)
@@ -364,7 +364,6 @@ class multiremoteAPI:
       return self.ssdp.generateXML()
 
     def handleCommand(self, remote, data):
-      logging.debug('YAY! We got a command via websocket instead of HTTP')
       logging.debug('Contents: ' + repr(data))
       obj = json.loads(data)
       logging.debug('Data in message says: %s', repr(obj))
