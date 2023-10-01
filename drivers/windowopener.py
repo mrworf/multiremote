@@ -37,6 +37,7 @@ class driverWindowopener(driverBase):
 
   def eventExtras(self, extras):
     if 'app' not in extras:
+      logging.error(f'"app" was not present in extras ({extras})')
       return
 
     requests.post(self.server, json={'start':extras['app'], 'token':self.token})

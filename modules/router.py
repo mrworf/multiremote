@@ -96,7 +96,10 @@ class Router (threading.Thread):
         logging.debug(z + " has extras")
         for e in order[z]["extras"]:
           logging.debug(e + " has params " + order[z]["extras"][e])
-          self.CONFIG.getDriver(e).applyExtras(order[z]["extras"][e])
+          try:
+            self.CONFIG.getDriver(e).applyExtras(order[z]["extras"][e])
+          except:
+            logging.exception('Failed to applyExtras()')
 
   def enableDrivers(self, drivers):
     """Powers on drivers and sends list of inital commands"""

@@ -56,7 +56,8 @@ class driverRoku(driverBase):
     self.addCommand("right",  CommandType.NAVIGATE_RIGHT,   self.navRight)
     self.addCommand("select", CommandType.NAVIGATE_ENTER,   self.navEnter)
     self.addCommand("back",   CommandType.NAVIGATE_BACK,    self.navBack)
-    self.addCommand("home",   CommandType.NAVIGATE_HOME,    self.navHome)
+    # Don't expose HOME anymore since it breaks the experience
+    #self.addCommand("home",   CommandType.NAVIGATE_HOME,    self.navHome)
 
     self.addCommand("info",     CommandType.PLAYBACK_OSD,           self.playbackInfo)
     self.addCommand("play",     CommandType.PLAYBACK_PLAYPAUSE,     self.playbackPlay)

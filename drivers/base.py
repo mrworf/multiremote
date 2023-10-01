@@ -37,6 +37,9 @@ class driverBase:
     self.handlers = []
     self.eventManager = None
 
+    # Setup a requests session to gain persistent connections
+    self.session = requests.Session()
+
     # Invoke the real init function
     self.init(*args)
 
@@ -103,7 +106,7 @@ class driverBase:
       'content' : None
     }
     try:
-      r = requests.get(url, timeout=self.httpTimeout/1000.0)
+      r = self.session.get(url, timeout=self.httpTimeout/1000.0)
       print((repr(r.content)))
       result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
     except:
@@ -117,7 +120,7 @@ class driverBase:
       'content' : None
     }
     try:
-      r = requests.post(url, data=data, timeout=self.httpTimeout/1000.0)
+      r = self.session.post(url, data=data, timeout=self.httpTimeout/1000.0)
       self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
     except:
       logging.exception('HTTP POST failed')
