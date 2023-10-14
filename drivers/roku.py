@@ -67,7 +67,7 @@ class driverRoku(driverBase):
     self.addCommand("text",     CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
 
   def eventOff(self):
-    requests.post(self.server + "keypress/Home")    
+    requests.post(self.server + "keypress/Home")
 
   def eventExtras(self, extras):
     """
@@ -117,40 +117,40 @@ class driverRoku(driverBase):
     return result
 
   def startApp(self, appid):
-    self.httpPost("%slaunch/%d" % (self.server, appid))
+    return self.httpPost("%slaunch/%d" % (self.server, appid))
 
   def navUp(self, zone):
-    self.httpPost(self.server + "keypress/Up")
+    return self.httpPost(self.server + "keypress/Up")
 
   def navDown(self, zone):
-    self.httpPost(self.server + "keypress/Down")
+    return self.httpPost(self.server + "keypress/Down")
 
   def navLeft(self, zone):
-    self.httpPost(self.server + "keypress/Left")
+    return self.httpPost(self.server + "keypress/Left")
 
   def navRight(self, zone):
-    self.httpPost(self.server + "keypress/Right")
+    return self.httpPost(self.server + "keypress/Right")
 
   def navEnter(self, zone):
-    self.httpPost(self.server + "keypress/Select")
+    return self.httpPost(self.server + "keypress/Select")
 
   def navBack(self, zone):
-    self.httpPost(self.server + "keypress/Back")
+    return self.httpPost(self.server + "keypress/Back")
 
   def navHome(self, zone):
-    self.httpPost(self.server + "keypress/Home")
+    return self.httpPost(self.server + "keypress/Home")
 
   def playbackInfo(self, zone):
-    self.httpPost(self.server + "keypress/Info")
+    return self.httpPost(self.server + "keypress/Info")
 
   def playbackPlay(self, zone):
-    self.httpPost(self.server + "keypress/Play")
+    return self.httpPost(self.server + "keypress/Play")
 
   def playbackFF(self, zone):
-    self.httpPost(self.server + "keypress/Fwd")
+    return self.httpPost(self.server + "keypress/Fwd")
 
   def playbackRW(self, zone):
-    self.httpPost(self.server + "keypress/Rev")
+    return self.httpPost(self.server + "keypress/Rev")
 
   def navTextInput(self, zone, txt):
     """ This function is somewhat limited since it does not care about

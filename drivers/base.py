@@ -26,6 +26,7 @@ import traceback
 import logging
 import socket
 import requests
+import time
 from xml.etree import ElementTree
 from dataclasses import field,make_dataclass
 
@@ -34,14 +35,19 @@ class driverBase:
     self.power = False
     self.COMMAND_HANDLER = {}
     self.httpTimeout = 250 # 250ms
+    self.httpRetries = 2
     self.handlers = []
     self.eventManager = None
 
     # Setup a requests session to gain persistent connections
-    self.session = requests.Session()
+    self.resetSession()
 
     # Invoke the real init function
     self.init(*args)
+
+  def resetSession(self):
+    logging.info('Initialized new requests session')
+    self.session = requests.Session()
 
   def setEventManager(self, eventManager):
     self.eventManager = eventManager
@@ -79,8 +85,8 @@ class driverBase:
 
   def _handleResponse(self, r, contentIsJSON=False, contentIsXML=False):
     result = {
-      'success' : False, 
-      'code': 501, 
+      'success' : False,
+      'code': 501,
       'content' : None
     }
     try:
@@ -91,8 +97,8 @@ class driverBase:
       else:
         content = r.content
       result = {
-        'success' : r.status_code == requests.codes.ok,
-        'code': r.status_code, 
+        'success' : r.status_code < 400,  # Anything below 400 is considered fine
+        'code': r.status_code,
         'content' : content
       }
     except:
@@ -101,29 +107,57 @@ class driverBase:
 
   def httpGet(self, url, contentIsJSON=False, contentIsXML=False):
     result = {
-      'success' : False, 
-      'code': 500, 
-      'content' : None
+      'success' : False,
+      'code': 500,
+      'content' : None,
+      'timeout' : True # Only present if timeout happened
     }
-    try:
-      r = self.session.get(url, timeout=self.httpTimeout/1000.0)
-      print((repr(r.content)))
-      result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
-    except:
-      logging.exception('HTTP GET failed')
+    retries = 0
+    measure = time.time()
+    while retries <= self.httpRetries and 'timeout' in result:
+      try:
+        r = self.session.get(url, timeout=self.httpTimeout/1000.0)
+        #logging.debug('HTTP GET result: ' + repr(r.content))
+        result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
+        break
+      except requests.exceptions.Timeout:
+        retries += 1
+        logging.warn('HTTP GET timed out, retry #%d', retries)
+        if retries == 2:  # Reset the session, most likely part of the issue
+          self.resetSession()
+      except:
+        logging.exception('HTTP GET failed')
+        break
+    measure = (time.time() - measure) * 1000
+    logging.info('HTTP GET %s took %dms', url, measure)
+    logging.debug('HTTP GET result: ' + repr(result))
     return result
 
   def httpPost(self, url, data = None, contentIsJSON=False, contentIsXML=False):
     result = {
-      'success' : False, 
-      'code': 500, 
-      'content' : None
+      'success' : False,
+      'code': 500,
+      'content' : None,
+      'timeout' : True # Only present if timeout happened
     }
-    try:
-      r = self.session.post(url, data=data, timeout=self.httpTimeout/1000.0)
-      self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
-    except:
-      logging.exception('HTTP POST failed')
+    retries = 0
+    measure = time.time()
+    while retries <= self.httpRetries and 'timeout' in result:
+      try:
+        r = self.session.post(url, data=data, timeout=self.httpTimeout/1000.0)
+        result = self._handleResponse(r, contentIsXML=contentIsXML, contentIsJSON=contentIsJSON)
+        break
+      except requests.exceptions.Timeout:
+        retries += 1
+        logging.warn('HTTP POST timed out, retry #%d', retries)
+        if retries == 2:  # Reset the session, most likely part of the issue
+          self.resetSession()
+      except:
+        logging.exception('HTTP POST failed')
+        break
+    measure = (time.time() - measure) * 1000
+    logging.info('HTTP POST %s took %dms', url, measure)
+    logging.debug('HTTP POST result: ' + repr(result))
     return result
 
   def FQDN2IP(self, fqdn, getIPV6 = False):
