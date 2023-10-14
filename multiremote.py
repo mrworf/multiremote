@@ -95,7 +95,7 @@ class WorkRunner(threading.Thread):
       self.args = args
       self.event = threading.Event()
       self.result = None
-    
+
     def wait(self):
       self.event.wait()
 
@@ -107,7 +107,7 @@ class WorkRunner(threading.Thread):
     threading.Thread.__init__(self)
     self.queue = queue.Queue()
     self.start()
-  
+
   def asynctask(self, task, *args):
     #logging.debug('asynctask called')
     w = WorkRunner.Work(task, *args)

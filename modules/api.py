@@ -367,8 +367,9 @@ class multiremoteAPI:
       logging.debug('Contents: ' + repr(data))
       obj = json.loads(data)
       logging.debug('Data in message says: %s', repr(obj))
+      measure = time.time()
 
-      mapping = { 
+      mapping = {
         'attach' : self.attachRemote,
         'subzone' : self.getSubZone,
         'zone' : self.getZone,
@@ -384,7 +385,7 @@ class multiremoteAPI:
 
       }
       parts = obj['addr'][1:].split('/')
-      
+
       if parts[0] in mapping:
         # Figure out how many parameters it expects and substitute with None
         sig = signature(mapping[parts[0]])
@@ -414,4 +415,7 @@ class multiremoteAPI:
         remote.post(retstr)
       else:
         logging.warning('Unregistered mapping: ' + parts[0])
+
+      measure = (time.time() - measure)*1000
+      logging.debug('Handle command took %dms', measure)
       return
