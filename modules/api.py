@@ -13,6 +13,7 @@ from modules.core import Core
 from modules.ssdp import SSDPHandler
 from modules.parser import SetupParser
 from modules.eventmgr import EventHandler
+from modules.webhook import WebhookManager
 
 def alwaysObject(x):
   return "***Unknown***"
@@ -33,11 +34,21 @@ class multiremoteAPI:
                 logging.warning("You're using hosted UX, make sure \"%s\" points to the right server", self.setup['OPTIONS']["ux-server"])
                 logging.warning('It should use port %d and end with /ux/' % cmdline.port)
 
-        self.remotes = RemoteManager()
-        self.core    = Core(self.setup, self.remotes)
-        self.router  = Router(self.core)
-        self.ssdp    = SSDPHandler(self.setup['OPTIONS']["ux-server"], cmdline.port)
-        self.events  = EventHandler(self.core)
+        self.remotes  = RemoteManager()
+        self.core     = Core(self.setup, self.remotes)
+        self.router   = Router(self.core)
+        self.ssdp     = SSDPHandler(self.setup['OPTIONS']["ux-server"], cmdline.port)
+        self.events   = EventHandler(self.core)
+        self.webhooks = WebhookManager()
+
+        # Load all webhooks
+        self.webhooks.load('conf/webhooks.conf')
+
+        # Register the webhook attributes we'll use
+        for zone in self.core.getZoneList():
+          self.webhooks.register_attribute(zone)
+          self.webhooks.register_attribute('%s.scene' % zone)
+          self.webhooks.register_attribute('%s.subzone' % zone)
 
         self.events.registerCommand('execute', self.handleCommand)
 
@@ -123,6 +134,8 @@ class multiremoteAPI:
         self.router.updateRoutes()
         ret["subzone"] = self.core.getSubZone(zone)
 
+        self.webhooks.update_attribute('%s.subzone' % zone, self.core.getSubZone(zone))
+
       if self.core.hasSubZones(zone):
         ret["active-subzone"] = self.core.getSubZone(zone)
       ret["zone"] = zone
@@ -166,6 +179,10 @@ class multiremoteAPI:
         self.events.notify(zone, {"type":"scene", "source" : remote, "data": {"scene" : self.core.getZoneScene(zone) } })
         self.events.notify(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : True}})
 
+        self.webhooks.update_attribute(zone, WebhookManager.ACTIVE)
+        self.webhooks.update_attribute('%s.scene' % zone, self.core.getZoneScene(zone))
+        self.webhooks.update_attribute('%s.subzone' % zone, self.core.getSubZone(zone))
+
       return ret
 
     def unassignZone(self, zone, remote):
@@ -182,6 +199,11 @@ class multiremoteAPI:
         self.core.clearSubZone(zone)
         self.events.notify(zone, {"type":"scene", "source" : remote, "data": {"scene" : None } })
         self.events.notify(None, {"type":"zone", "source" : remote, "data": {"zone" : zone, "inuse" : False}})
+
+        self.webhooks.update_attribute(zone, WebhookManager.INACTIVE)
+        self.webhooks.update_attribute('%s.scene' % zone, WebhookManager.EMPTY)
+        self.webhooks.update_attribute('%s.subzone' % zone, WebhookManager.EMPTY)
+
 
       self.router.updateRoutes()
       return ret
