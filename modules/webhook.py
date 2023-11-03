@@ -92,7 +92,7 @@ class WebhookManager:
             actions = 'end'
           elif cmd == 'call':
             if actions is not None:
-              hook[actions].append({'url':parts[1]})
+              hook[actions].append({'url':parts[1], 'data':({k: v for k,v in (item.split('=') for item in parts[2:])} if len(parts)>2 else None) })
           else:
             logging.warning('Unknown directive on line %d in "%s": "%s"', c, filename, line)
         except:
@@ -154,7 +154,10 @@ class WebhookManager:
     for endpoint in endpoints:
       try:
         logging.debug('Calling "%s"', endpoint['url'])
-        result = requests.get(endpoint['url'])
+        if endpoint['data'] != None:
+          result = requests.post(endpoint['url'], data=endpoint['data'])
+        else:
+          result = requests.get(endpoint['url'])
         logging.info('Result: %d %s', result.status_code, result.reason)
       except:
         logging.exception('GET %s failed', endpoint['url'])
