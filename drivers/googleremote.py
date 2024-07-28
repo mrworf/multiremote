@@ -195,8 +195,6 @@ class GoogleRemote:
         server_modulus = server_rsa_key.n
         server_exponent = server_rsa_key.e
 
-        #print(repr(server_exponent))
-
         # Hashing using SHA-256
         digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
         digest.update(client_modulus.to_bytes((client_modulus.bit_length() + 7) // 8, byteorder='big'))
@@ -223,7 +221,6 @@ class GoogleRemote:
             tag = Tag.from_number(tag_number)
             i += 1
 
-            print(i)
             length = tag.length if tag.length is not None else message[i]
             i += 1 if tag.length is None else 0
 
@@ -292,7 +289,7 @@ class GoogleRemote:
         service_bytes = service_name.encode()
         device_bytes = device_name.encode()
 
-        print('===[ Sending pariring message')
+        logging.info('Sending pariring message')
 
         # Construct the pairing message payload
         payload = bytearray([
@@ -308,7 +305,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_send_option(self):
-        print('===[ Sending option message')
+        logging.info('Sending option message')
         payload = bytearray([
             Tag.PROTOCOL_VERSION.toInt(), 2,
             Tag.STATUS_CODE.toInt(), 200, 1,
@@ -328,7 +325,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_send_config(self):
-        print('===[ Sending config message')
+        logging.info('Sending config message')
         payload = bytearray([
             Tag.PROTOCOL_VERSION.toInt(), 2,
             Tag.STATUS_CODE.toInt(), 200, 1,
@@ -347,7 +344,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_send_secret(self, secret):
-        print('===[ Sending secret')
+        logging.info('Sending secret')
         server_cert_bin = self.ssock.getpeercert(binary_form=True)
         server_cert = x509.load_der_x509_certificate(server_cert_bin, default_backend())
         secret = self.encode_secret(server_cert, secret)
@@ -365,7 +362,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_start_application(self, intent):
-        print(f'===[ Start application {intent}')
+        logging.info(f'Start application {intent}')
         payload = bytearray([
             Tag.LAUNCH_APPLICATION_COMMAND.toInt(), 5,
             2+len(intent), # Size of all to come
@@ -376,7 +373,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_send_app_info(self):
-        print(f'===[ Sending app info')
+        logging.info(f'Sending app info')
 
         tags = bytearray([
             1, 49,
@@ -391,11 +388,11 @@ class GoogleRemote:
             24, 1, 34,
             *tags
         ])
-        print("\n".join(str(e) for e in payload))
+        #logging.info("\n".join(str(e) for e in payload))
         self.send_message(payload)
 
     def cmd_send_ack(self):
-        print(f'===[ Sending ack')
+        logging.info(f'Sending ack')
 
         payload = bytearray([
             18, 3, 8, 238, 4
@@ -403,7 +400,7 @@ class GoogleRemote:
         self.send_message(payload)
 
     def cmd_send_key(self, keycode):
-        print(f'===[ Sending keycode {keycode}')
+        logging.info(f'Sending keycode {keycode}')
 
         payload = bytearray([
             82, 4, 8, keycode, 16, 3
@@ -412,7 +409,7 @@ class GoogleRemote:
 
     def print_result(self, result):
         for k,v in result.items():
-            print(f'{Tag.from_number(k).toString()} ({k}): {", ".join(str(e) for e in v)}')
+            logging.debug(f'{Tag.from_number(k).toString()} ({k}): {", ".join(str(e) for e in v)}')
 
     def print_hex(self, byte_array):
         hex_values = [f'{b:02x}' for b in byte_array]
@@ -421,7 +418,7 @@ class GoogleRemote:
         for i in range(0, len(hex_values), 8):
             hex_row = ' '.join(hex_values[i:i+8])
             char_row = ''.join(printable_chars[i:i+8])
-            print(f'{hex_row}  {char_row}')
+            logging.debug(f'{hex_row}  {char_row}')
 
     def pair(self):
         self.ssock = self.create_ssl_connection(self.server, 6467)
@@ -482,7 +479,6 @@ class GoogleRemote:
     def state_machine(self, state):
         running = True
         while running:
-            #print(f'Executing state {state}')
             expect_status = True
             waitfor = None
             if state == 0:
@@ -497,7 +493,7 @@ class GoogleRemote:
                     secret = input('Please enter the six digit code shown on the display: ')
                 self.cmd_send_secret(secret)
             elif state == 4:
-                print('Remote has paired')
+                logging.info('Remote has paired')
                 break
                 
             elif state == 5:
@@ -512,7 +508,7 @@ class GoogleRemote:
                 waitfor = [194, 162, 146]
                 expect_status = False
             elif state == 8:
-                print('Statemachine is ready for input')
+                logging.info('Statemachine is ready for input')
                 state = 9
             elif state == 9:
                 # Check if the queue has any commands
@@ -531,7 +527,7 @@ class GoogleRemote:
 
                 expect_status = False
             else:
-                print("State machine done")
+                logging.info("State machine done")
                 break
 
             atleastonce = True
@@ -545,52 +541,52 @@ class GoogleRemote:
                         break
 
                 payload = self.receive_message()
-                print(f'Payload received ({len(payload)}):\n  {", ".join(str(e) for e in payload)}')
-                self.print_hex(payload)
+                #logging.debug(f'Payload received ({len(payload)}):\n  {", ".join(str(e) for e in payload)}')
+                #self.print_hex(payload)
                 result = self.parse_message(payload)
                 # Handle unsolicited messages
                 if payload[0] == Tag.PING_MESSAGE.toInt():
-                    print('Received ping message, responding with pong')
+                    #print('Received ping message, responding with pong')
                     payload = bytearray([
                         Tag.PONG_RESPONSE.toInt(),
                         2, 8, 25
                     ])
                     self.send_message(payload)
                 elif payload[0] == Tag.OPTION_MESSAGE.toInt():
-                    print('Received option message')
+                    logging.debug('Received option message')
                     # Don't know what the first 6 are, but the 7th byte is the size of the message
-                    print(f'Running package is: {payload[7:].decode()}')
+                    logging.debug(f'Running package is: {payload[7:].decode()}')
                 elif payload[0] == Tag.ENCODED_SECRET.toInt():
-                    print('Received information about the state of the player')
+                    logging.debug('Received information about the state of the player')
                     # Again, we have NO CLUE really, except byte 5 indicates on/off (1/0)
                     if payload[4] == 0:
-                        print('Player is off')
+                        logging.info('Player is off')
                         self.cmd_send_key(23) # Power on? Sort of? Select key on the dpad
                         # SWALLOW THIS MESSAGE
                         continue
                     else:
-                        print('Player is on')
+                        logging.info('Player is on')
 
 
                 if waitfor is not None:
                     if isinstance(waitfor, list):
                         if payload[0] in waitfor:
-                            print('Get the expected message, continuing')
+                            #print('Get the expected message, continuing')
                             waitfor.remove(payload[0])
                             if not waitfor:
-                                print('All expected messages received, continuing')
+                                #print('All expected messages received, continuing')
                                 waitfor = None
                     elif payload[0] == waitfor:
-                        print('Get the expected message, continuing')
+                        #print('Get the expected message, continuing')
                         waitfor = None
 
             if Tag.STATUS_CODE.toInt() not in result and expect_status:
-                print('Warning: No result')
+                logging.warning('No result')
                 #running = False
             elif expect_status:
                 status_code = result[Tag.STATUS_CODE.toInt()][0]
                 if status_code != 200: # 144,3 = Error, 143,3 = Bad Configuration
-                    print(f'Command failed, code {status_code}')
+                    logging.error(f'Command failed, code {status_code}')
                     running = False
                 else:
                     self.print_result(result)
@@ -695,6 +691,108 @@ class driverGoogleremote(driverBase):
     #self.addCommand("text",     CommandType.NAVIGATE_TEXTINPUT,     self.navTextInput, None, None, None, 1)
     self.remote = GoogleRemote(self.server)
     self.remote.control_start()
+    self.setup_adb()
+
+  def setup_adb(self):
+    # First, flush any running adb process
+    logging.debug("Killing any running ADB server")
+    try:
+      subprocess.run(['adb', 'kill-server'])
+    except subprocess.CalledProcessError as e:
+      logging.error(f"Failed to kill ADB server: {e}")
+      return False
+    
+    # Then connect to the device
+    logging.debug(f"Connecting to ADB device at {self.server}")
+    connect_process = subprocess.run(['adb', 'connect', f'{self.server}:5555'], capture_output=True, text=True)
+    
+    if 'connected to' not in connect_process.stdout:
+      logging.error("Failed to connect to ADB device: %s", connect_process.stdout)
+      return False
+
+    logging.debug("Starting ADB shell session...")
+    self.adb = subprocess.Popen(['adb', 'shell'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # Ensure we are connected
+    if self.adb is not None and self.adb.poll() is not None:
+      logging.error("Failed to start ADB shell")
+      self.adb = None
+      return False
+    logging.debug("ADB shell session started")
+
+    # Set stdout to non-blocking
+    flags = fcntl.fcntl(self.adb.stdout, fcntl.F_GETFL)
+    fcntl.fcntl(self.adb.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    return True
+
+  def exec_command(self, command, ignore_result=False):
+    if self.adb is None:
+      logging.error("ADB shell not started, trying to start")
+      if not self.setup_adb():
+        logging.error("Failed to start ADB shell")
+        return None
+      
+    # Let's see if the ADB instance works still
+    try:
+      self.adb.stdout.flush()
+    except BrokenPipeError:
+      logging.error("ADB shell connection broken, trying to restart")
+      if not self.setup_adb():
+        logging.error("Failed to start ADB shell")
+        return None
+
+    try:
+      logging.debug(f"Executing command: {command}")        
+      self.adb.stdin.write(command + '\n')
+      self.adb.stdin.flush()
+      if ignore_result:
+        return None
+      logging.debug(f"Waiting for result")
+      output = ''
+      while select.select([self.adb.stdout], [], [], 0.1)[0]:
+        logging.debug(f"Reading output")
+        while True:
+          try:
+            chunk = self.adb.stdout.read(1024)
+            if not chunk:
+              break
+            output += chunk
+          except IOError:
+            break
+        logging.debug(f"Command: {command} -> Output: {output}")
+        return output
+    except Exception as e:
+      logging.exception(f"Failed to execute command: {command}. Error: {e}")
+    return None
+
+  def launch_app(self, package_name, ambiguous=False):
+    if ambiguous:
+      result = self.exec_command(f'pm resolve-activity -a android.intent.action.MAIN --brief {package_name}')
+    else:
+      result = self.exec_command(f'pm resolve-activity -a android.intent.action.MAIN -c android.intent.category.LAUNCHER --brief {package_name}')
+    if result is None:
+      logging.warning(f"Failed to resolve activity for package {package_name}, trying more ambitious approach")
+      return
+    found = False
+    intent = None
+    for line in result.splitlines():
+      if line.startswith('priority=0'):
+        found = True
+        continue
+      if found:
+        intent = line
+        break
+    if intent is None:
+      logging.error(f"Failed to find intent for package {package_name}")
+      if not ambiguous:
+        logging.warning("Trying more ambitious approach")
+        self.launch_app(package_name, True)
+      return
+
+    # First, make sure it's not running        
+    self.exec_command(f'am force-stop {package_name}')
+    # Then launch it
+    self.exec_command(f'am start -n {intent}')
+
 
   def eventOff(self):
     self.remote.send_keyinput('home')
@@ -705,7 +803,7 @@ class driverGoogleremote(driverBase):
     You must provide the packasge name of the app you want to launch
     """
     if "app" in extras:
-        self.remote.launch_app(extras["app"])
+        self.launch_app(extras["app"])
 
   def navUp(self, zone):
     self.remote.send_keyinput('up')
