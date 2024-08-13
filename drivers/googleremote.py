@@ -35,6 +35,13 @@ when user activates the scene.
 
 App should be the package name you want to launch, use the pm command
 in adb shell to find what packages you have.
+
+Acknowledgements:
+The code to successfully pair and communicate with a Google TV device
+was inspired by the following resources:
+- https://github.com/Aymkdn/assistant-freebox-cloud/wiki/Google-TV-(aka-Android-TV)-Remote-Control-(v2)
+- https://github.com/laxathom/google-tv-pairing-protocol
+
 """
 
 if __name__ != "__main__":
@@ -105,6 +112,7 @@ class Tag:
     LAUNCH_APPLICATION_COMMAND = TagValue(210, "Launch Application Command Tag")
     PING_MESSAGE = TagValue(66, "Ping Message Tag")
     PONG_RESPONSE = TagValue(74, "Pong Response Tag")
+    DEVICE_INFO = TagValue(146, "Device Info Tag?")
 
     # Add a dictionary to map tag numbers to tag tuples
     _tag_map = {value[0]: value for key, value in vars().items() if isinstance(value, tuple) and isinstance(value[0], int)}
@@ -445,18 +453,34 @@ class GoogleRemote:
 
     def run_state_machine(self, state):
         restart = True
+        retries = 0
         while restart:
-          self.ssock = self.create_ssl_connection(self.server, 6466)
-          if self.ssock is not None:
-              try:
-                restart = False
-                self.state_machine(state)
-              except Exception as e:
-                logging.exception(f"Failed to run state machine")
-                logging.info('Restarting connection')
-                restart = True
-              self.ssock.close()
-  
+          try:
+            self.ssock = self.create_ssl_connection(self.server, 6466)
+            if self.ssock is not None:
+              witherror = self.state_machine(state)
+              if witherror:
+                  logging.error('Statemachine ended with error, retry connection')
+                  restart = True
+              else:
+                  logging.debug('State machine ended')
+                  restart = False
+                  retries = 0
+            else:
+              logging.error('No socket connection')
+              restart = True
+          except Exception as e:
+            logging.exception(f"Failed to run state machine")
+            restart = True
+          if restart:
+            retries += 1
+            if retries > 10:
+              logging.error('Maximum retry attempts reached, sleeping 5min')
+              time.sleep(300)
+              retries = 1
+            logging.info(f'Restarting connection, attempt {retries}')
+            time.sleep(0.1 * retries) # 100ms delay
+
     def create_ssl_connection(self, host, port, state=0):
         # Step 1: Create SSL context
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -478,6 +502,7 @@ class GoogleRemote:
         
     def state_machine(self, state):
         running = True
+        should_restart = False
         while running:
             expect_status = True
             waitfor = None
@@ -566,6 +591,10 @@ class GoogleRemote:
                         continue
                     else:
                         logging.info('Player is on')
+                elif payload[0] == Tag.DEVICE_INFO.toInt():
+                    logging.debug(f'Received device info(?) tag, which we ignore')
+                    self.print_hex(payload)
+                    continue
 
 
                 if waitfor is not None:
@@ -586,8 +615,10 @@ class GoogleRemote:
             elif expect_status:
                 status_code = result[Tag.STATUS_CODE.toInt()][0]
                 if status_code != 200: # 144,3 = Error, 143,3 = Bad Configuration
-                    logging.error(f'Command failed, code {status_code}')
+                    logging.error(f'Command failed, code {status_code}, payload size is {len(payload)}')
+                    self.print_hex(payload)
                     running = False
+                    shouldrestart = True
                 else:
                     self.print_result(result)
                     state += 1
@@ -596,6 +627,7 @@ class GoogleRemote:
             if state > 9:
                 # Keep statemachine running
                 state = 9
+        return shouldrestart
 
     def launch_app(self, app):
         self.queue.put({'cmd':'launch_app', 'value':app}) 
@@ -733,7 +765,7 @@ class driverGoogleremote(driverBase):
       
     # Let's see if the ADB instance works still
     try:
-      self.adb.stdout.flush()
+      self.adb.stdin.flush()
     except BrokenPipeError:
       logging.error("ADB shell connection broken, trying to restart")
       if not self.setup_adb():
@@ -741,7 +773,7 @@ class driverGoogleremote(driverBase):
         return None
 
     try:
-      logging.debug(f"Executing command: {command}")        
+      logging.debug(f"Executing command: {command}")
       self.adb.stdin.write(command + '\n')
       self.adb.stdin.flush()
       if ignore_result:
@@ -791,10 +823,14 @@ class driverGoogleremote(driverBase):
     # First, make sure it's not running        
     self.exec_command(f'am force-stop {package_name}')
     # Then launch it
-    self.exec_command(f'am start -n {intent}')
+    self.exec_command(f'am start -a android.intent.action.MAIN -n {intent}')
 
+  def eventOn(self):
+    logging.debug('Power on, send home button')
+    self.remote.send_keyinput('home')
 
   def eventOff(self):
+    logging.debug('Power off, send home button (should track active app)')
     self.remote.send_keyinput('home')
 
   def eventExtras(self, extras):
