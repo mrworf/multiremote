@@ -419,6 +419,26 @@ class GoogleRemote:
         for k,v in result.items():
             logging.debug(f'{Tag.from_number(k).toString()} ({k}): {", ".join(str(e) for e in v)}')
 
+    def print_payload(self, payload):
+        # This assumes that all data is in the format of:
+        # 1 byte = tag
+        # 1 byte = length
+        # n bytes = data
+        i = 0
+        print(f'Payload size {len(payload)}:')
+        try:
+            while i < len(payload):
+                tag = payload[i]
+                i += 1
+                length = payload[i]
+                i += 1
+                data = payload[i:i+length]
+                i += length
+                logging.debug(f'Tag {tag}, length {length}, data:')
+                self.print_hex(data)
+        except Exception as e:
+            logging.error(f"Failed to parse payload: {e}")
+
     def print_hex(self, byte_array):
         hex_values = [f'{b:02x}' for b in byte_array]
         printable_chars = ['.' if chr(b) not in string.printable or chr(b) in string.whitespace else chr(b) for b in byte_array]
@@ -480,6 +500,7 @@ class GoogleRemote:
               retries = 1
             logging.info(f'Restarting connection, attempt {retries}')
             time.sleep(0.1 * retries) # 100ms delay
+        logging.error('Statemachine is no longer running')
 
     def create_ssl_connection(self, host, port, state=0):
         # Step 1: Create SSL context
@@ -537,7 +558,7 @@ class GoogleRemote:
                 state = 9
             elif state == 9:
                 # Check if the queue has any commands
-                while not self.queue.empty():
+                if not self.queue.empty():
                     command = self.queue.get()
                     try:
                       if command['cmd'] == 'keyinput':
@@ -555,8 +576,11 @@ class GoogleRemote:
                 logging.info("State machine done")
                 break
 
+            # This loop is HORRIBLE, need to refactor later
             atleastonce = True
+            nodata = True
             while waitfor is not None or atleastonce:
+                #logging.debug(f'Reading message for state {state} (waitfor = {waitfor}, atleastonce = {atleastonce})')
                 atleastonce = False
                 # if state is 9, we don't wait for a response
                 if state == 9:
@@ -565,6 +589,7 @@ class GoogleRemote:
                     if not ready_to_read:
                         break
 
+                nodata = False
                 payload = self.receive_message()
                 #logging.debug(f'Payload received ({len(payload)}):\n  {", ".join(str(e) for e in payload)}')
                 #self.print_hex(payload)
@@ -592,10 +617,8 @@ class GoogleRemote:
                     else:
                         logging.info('Player is on')
                 elif payload[0] == Tag.DEVICE_INFO.toInt():
-                    logging.debug(f'Received device info(?) tag, which we ignore')
-                    self.print_hex(payload)
-                    continue
-
+                    logging.debug(f'Received device info(?) tag')
+                    self.print_payload(payload)
 
                 if waitfor is not None:
                     if isinstance(waitfor, list):
@@ -608,25 +631,33 @@ class GoogleRemote:
                     elif payload[0] == waitfor:
                         #print('Get the expected message, continuing')
                         waitfor = None
+            #logging.debug(f'Payload read for state {state}')
 
-            if Tag.STATUS_CODE.toInt() not in result and expect_status:
-                logging.warning('No result')
-                #running = False
-            elif expect_status:
-                status_code = result[Tag.STATUS_CODE.toInt()][0]
-                if status_code != 200: # 144,3 = Error, 143,3 = Bad Configuration
-                    logging.error(f'Command failed, code {status_code}, payload size is {len(payload)}')
-                    self.print_hex(payload)
-                    running = False
-                    shouldrestart = True
-                else:
-                    self.print_result(result)
-                    state += 1
+            if nodata:
+                #logging.error('No data received')
+                time.sleep(0.05) # Wait 50ms
+                # Ideally, we have a loop which waits on either data from the socket or from
+                # the remote itself. We should not be busy waiting like this.
             else:
-                state += 1
-            if state > 9:
-                # Keep statemachine running
-                state = 9
+                if Tag.STATUS_CODE.toInt() not in result and expect_status:
+                    logging.warning('No result')
+                    #running = False
+                elif expect_status:
+                    status_code = result[Tag.STATUS_CODE.toInt()][0]
+                    if status_code != 200: # 144,3 = Error, 143,3 = Bad Configuration
+                        logging.error(f'Command failed, code {status_code}, payload size is {len(payload)}')
+                        self.print_hex(payload)
+                        self.print_payload(payload)
+                        running = False
+                        shouldrestart = True
+                    else:
+                        self.print_result(result)
+                        state += 1
+                else:
+                    state += 1
+                if state > 9:
+                    # Keep statemachine running
+                    state = 9
         return shouldrestart
 
     def launch_app(self, app):
@@ -765,6 +796,7 @@ class driverGoogleremote(driverBase):
       
     # Let's see if the ADB instance works still
     try:
+      self.adb.stdin.write('\n')
       self.adb.stdin.flush()
     except BrokenPipeError:
       logging.error("ADB shell connection broken, trying to restart")
@@ -821,13 +853,14 @@ class driverGoogleremote(driverBase):
       return
 
     # First, make sure it's not running        
-    self.exec_command(f'am force-stop {package_name}')
+    #self.exec_command(f'am force-stop {package_name}')
     # Then launch it
-    self.exec_command(f'am start -a android.intent.action.MAIN -n {intent}')
+    self.exec_command(f'am start -S -a android.intent.action.MAIN -n {intent}')
 
   def eventOn(self):
     logging.debug('Power on, send home button')
-    self.remote.send_keyinput('home')
+    # Let's not, assume it's always running
+    #self.remote.send_keyinput('home')
 
   def eventOff(self):
     logging.debug('Power off, send home button (should track active app)')
