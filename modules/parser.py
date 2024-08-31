@@ -403,7 +403,11 @@ class SetupParser:
         arguments = config['DRIVER_TABLE'][item][k]
 
         logging.debug("Loading " + driver)
-        config['DRIVER_TABLE'][item] = self.instanciate(driver, arguments)
+        try:
+          config['DRIVER_TABLE'][item] = self.instanciate(driver, arguments)
+        except:
+          logging.exception(f'Unable to load driver {driver}')
+          config['DRIVER_TABLE'][item] = self.instanciate('base', []) # This should give us an empty shell
         break
 
     return True
