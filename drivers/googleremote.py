@@ -607,7 +607,11 @@ class GoogleRemote:
                 elif payload[0] == Tag.OPTION_MESSAGE.toInt():
                     logging.debug('Received option message')
                     # Don't know what the first 6 are, but the 7th byte is the size of the message
-                    logging.debug(f'Running package is: {payload[7:].decode()}')
+                    try:
+                        self.print_hex(payload[7:])
+                        logging.debug(f'Running package is: {payload[7:].decode()}')
+                    except Exception as e:
+                        logging.error(f"Failed to decode package name: {e}")
                 elif payload[0] == Tag.ENCODED_SECRET.toInt():
                     logging.debug('Received information about the state of the player')
                     # Again, we have NO CLUE really, except byte 5 indicates on/off (1/0)
@@ -808,26 +812,31 @@ class driverGoogleremote(driverBase):
 
     try:
       logging.debug(f"Executing command: {command}")
-      self.adb.stdin.write(command + '\n')
+      self.adb.stdin.write(command + ' ; echo ==$?:EOT==\n')
       self.adb.stdin.flush()
       if ignore_result:
         return None
       logging.debug(f"Waiting for result")
       output = ''
-      while select.select([self.adb.stdout], [], [], 0.1)[0]:
+      while True:
+        read_avail, _, _ = select.select([self.adb.stdout], [], [], 0.5)
+        if not read_avail:
+           logging.debug(f"No output yet, waiting more")
+           continue
         logging.debug(f"Reading output")
-        while True:
+        while 'EOT==' not in output:
           try:
             chunk = self.adb.stdout.read(1024)
-            if not chunk:
-              break
             output += chunk
           except IOError:
+            logging.exception("Failed to read output")
             break
-        logging.debug(f"Command: {command} -> Output: {output}")
+        logging.debug(f'Command: "{command}"')
+        logging.debug(f'Output: "{output}"')
         return output
     except Exception as e:
       logging.exception(f"Failed to execute command: {command}. Error: {e}")
+    logging.warning(f"While loop exited, output: {output}")
     return None
 
   def launch_app(self, package_name, ambiguous=False):
@@ -855,16 +864,18 @@ class driverGoogleremote(driverBase):
       return
 
     # First, make sure it's not running        
-    #self.exec_command(f'am force-stop {package_name}')
+    self.exec_command(f'am force-stop {package_name}')
     # Then launch it
-    self.exec_command(f'am start -S -a android.intent.action.MAIN -n {intent}')
+    self.exec_command(f'am start -a android.intent.action.MAIN -n {intent}')
 
   def eventOn(self):
     logging.debug('Power on, send home button')
     # Let's not, assume it's always running
-    event = threading.Event()
-    self.remote.send_keyinput('home', self.eventOnCallback, event)
-    event.wait()
+    #event = threading.Event()
+    #self.remote.send_keyinput('home', self.eventOnCallback, event)
+    #event.wait()
+    # Do this via ADB since it's more reliable
+    self.exec_command('input keyevent 3')
 
   def eventOnCallback(self, event):
      event.set()
