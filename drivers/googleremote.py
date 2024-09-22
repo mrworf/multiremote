@@ -563,6 +563,8 @@ class GoogleRemote:
                     try:
                       if command['cmd'] == 'keyinput':
                           self.cmd_send_key(command['value'])
+                          if command['callback'] is not None:
+                              command['callback'](command.get('args', None))
                       elif command['cmd'] == 'exit':
                           running = False
                           break
@@ -663,7 +665,7 @@ class GoogleRemote:
     def launch_app(self, app):
         self.queue.put({'cmd':'launch_app', 'value':app}) 
 
-    def send_keyinput(self, direction):
+    def send_keyinput(self, direction, callback=None, cbArgs=None):
       map = {
         'up': 19,
         'down': 20,
@@ -731,7 +733,7 @@ class GoogleRemote:
         logging.error(f"Invalid direction: {direction}")
         return
 
-      self.queue.put({'cmd':'keyinput', 'value':map[direction]})
+      self.queue.put({'cmd':'keyinput', 'value':map[direction], 'callback':callback, 'args':cbArgs})
 
 class driverGoogleremote(driverBase):
   def init(self, server):
@@ -860,7 +862,12 @@ class driverGoogleremote(driverBase):
   def eventOn(self):
     logging.debug('Power on, send home button')
     # Let's not, assume it's always running
-    #self.remote.send_keyinput('home')
+    event = threading.Event()
+    self.remote.send_keyinput('home', self.eventOnCallback, event)
+    event.wait()
+
+  def eventOnCallback(self, event):
+     event.set()
 
   def eventOff(self):
     logging.debug('Power off, send home button (should track active app)')
